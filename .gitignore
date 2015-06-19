@@ -1,0 +1,14 @@
+*~
+*.swp
+*.orig
+*.bak
+*.o
+*.d
+*.pyc
+*.a
+*.so
+*.lib
+*.htm
+*.hg
+*.hg/*
+.hgignore
