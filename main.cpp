@@ -647,12 +647,13 @@ int main()
 
     // Ethernet initialization
 
-    //EthernetInterface eth;
-    static const char* mbedIp       = "10.0.18.59" ;  //IP
-    static const char* mbedMask     = "255.255.255.0";  // Mask
-    static const char* mbedGateway  = "10.0.18.1";    //Gateway
-    //EthernetInterface::init(mbedIp,mbedMask,mbedGateway); //Use  these parameters for static IP
+#if defined(ETH_DHCP)
     EthernetInterface::init(); //Use DHCP
+#else
+#if defined(ETH_FIXIP)
+    EthernetInterface::init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use  these parameters for static IP
+#endif
+#endif
 
     TCPSocketConnection client;
     TCPSocketServer server;
