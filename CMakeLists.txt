@@ -56,10 +56,17 @@ target_link_libraries(${CMAKE_PROJECT_NAME} ${MBED_LIBS} )
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   SUFFIX ".axf"
   )
+
+#Create binary file from axf
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_PROJECT_NAME}.axf ${CMAKE_PROJECT_NAME}.bin
+  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  COMMENT "Converting the AXF output to a binary file"
+  )
+
 # ------------------------------------------------------------------------------
 # custom target for copying to mbed device
 add_custom_target(upload
-  ${CMAKE_OBJCOPY} -O binary ${CMAKE_PROJECT_NAME} ${CMAKE_PROJECT_NAME}.bin
   COMMAND cp ${CMAKE_PROJECT_NAME}.bin ${MBED_MOUNT}
 )
 
