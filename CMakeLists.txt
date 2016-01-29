@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 
-project (rffe-tests)
+project (rffe-fw)
 
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 
