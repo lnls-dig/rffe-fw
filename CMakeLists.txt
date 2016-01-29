@@ -9,9 +9,9 @@ include(toolchain/arm_none_eabi_toolchain.cmake)
 set(TOOLCHAIN "GCC_ARM" CACHE STRING "Toolchain used to build project")
 
 set(MBED_PATH mbed-lib)
-set(MBED_MOUNT /media/MBED/)
+set(MBED_MOUNT /media/MBED/ CACHE PATH "Path to MBED Storage")
 
-set(MBED_TARGET LPC1768 )
+set(MBED_TARGET LPC1768 CACHE STRING "MBED Target CPU")
 
 set(USE_RTOS true CACHE BOOL "Compile MBED-RTOS lib")
 set(USE_NET true CACHE BOOL "Compile EthernetInterface lib")
@@ -38,6 +38,7 @@ if(USE_NET)
     add_definitions("-DETH_GATEWAY=\"${MBED_GATEWAY}\"")
   endif()
 endif()
+
 include(mbed.cmake)
 
 #Add all project sources to be compiled
