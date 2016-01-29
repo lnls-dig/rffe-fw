@@ -4,13 +4,19 @@
 #include "EthernetInterface.h"
 #include "USBHostSerial.h"
 #include "Drivers.h"
-#include "server.h"
-#include <bsmp/server.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include "PID.h"
+#include "lpc_phy.h"
+extern "C" {
+#include "server.h"
+#include <bsmp/server.h>
+}
+
+#define DP8_SPEED10MBPS    (1 << 1)   /**< 1=10MBps speed */
+#define DP8_VALID_LINK     (1 << 0)   /**< 1=Link active */
 
 #define BUFSIZE 140
 #define SERVER_PORT 6791
@@ -66,7 +72,6 @@ uint8_t Version[8];
 
 LocalFileSystem localdir("local");               // Create the local filesystem under the name "local"
 FILE *fp;
-Ethernet *cable = new Ethernet;
 
 // Inicializations - MBED
 
@@ -104,6 +109,11 @@ Serial pc(USBTX, USBRX);
 
 // spi(mosi, miso, sclk)
 SPI spi1(p5,p6,p7);
+
+bool get_eth_link_status(void)
+{
+    return (lpc_mii_read_data() & DP8_VALID_LINK) ? true : false;
+}
 
 //********************************************** Drivers functions **********************************************************
 void ADT7320_config(mbed::DigitalOut cs)
@@ -350,7 +360,7 @@ void Switching_Attenuators_Control(void const *arg)
     while (1) {
 
         // Ethernet link test
-        if (cable->link())
+        if (get_eth_link_status())
             LedY = 1;
         else
             LedY = 0;
@@ -758,7 +768,7 @@ int main()
         //printf("\nDisconnected: %d\n",eth.disconnect());
         client.close();
         server.close();
-        if (!cable->link()) {
+        if (!get_eth_link_status()) {
             EthernetInterface::disconnect();
             printf("\n Trying to establish connection...\n");
             while (EthernetInterface::connect(5000)) {
