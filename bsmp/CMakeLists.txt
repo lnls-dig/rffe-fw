@@ -1,0 +1,16 @@
+set(BSMP_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
+set(BSMP_SRCS
+  ${BSMP_PATH}/bsmp.c
+  ${BSMP_PATH}/server.c
+  ${BSMP_PATH}/server_priv.c
+  ${BSMP_PATH}/md5/md5.c
+  )
+
+set(BSMP_HDRS
+  ${BSMP_PATH}/
+  ${BSMP_PATH}/md5
+  )
+
+set(PROJ_SRCS ${PROJ_SRCS} ${BSMP_SRCS} PARENT_SCOPE)
+set(PROJ_HDRS ${PROJ_HDRS} ${BSMP_HDRS} PARENT_SCOPE)
