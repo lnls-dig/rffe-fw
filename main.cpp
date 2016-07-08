@@ -170,41 +170,10 @@ double ADT7320_read(mbed::DigitalOut cs)
     return temp;
 }
 
-void DAC8552_write(mbed::DigitalOut cs, double voutA, double voutB)
-{
-    // SPI config
-    spi1.frequency(1000000);
-    spi1.format(16,1);
+#define DAC_AC_SEL 0xA
+#define DAC_BD_SEL 0xB
 
-    int data;
-
-    // Calculating data to voutA
-    data = int(voutA*65536/Refin);
-    // Transmition
-    cs = 0;
-    Thread::wait(1);
-    // control - write data to voutA
-    spi1.write(0x00);
-    spi1.write(data);
-    Thread::wait(1);
-    cs = 1;
-    Thread::wait(1);
-
-    // Calculating data to voutB
-    data = int(voutB*65536/Refin);
-    // Transmition
-    cs = 0;
-    Thread::wait(1);
-    // control - write data to voutA
-    spi1.write(0x04);
-    spi1.write(data);
-    Thread::wait(1);
-    cs = 1;
-    Thread::wait(1);
-}
-
-//********************************************** Thread functions **********************************************************
-void Temp_Feedback_Control(void const *args)
+void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
 {
     // Control bits         Data bits   DAC     Function
     // 1 0 0 0 (0x8000)     12 bits      A      Input register and DAC register updated, output updated
@@ -214,6 +183,31 @@ void Temp_Feedback_Control(void const *args)
     // vout = Refin * data  / 4096
     // data = vout * 4096 / Refin
 
+    uint16_t data;
+    uint16_t cfg;
+
+    // SPI config
+    spi1.frequency(1000000);
+    spi1.format(16,1);
+    cs = 1;
+
+    // Calculating data to vout
+    data = (uint16_t)(vout*4096/Refin);
+    cfg = ( dac_sel << 12 ) | ( data & 0x0FFF );
+
+    // Transmition
+    cs = 0;
+    Thread::wait(1);
+    // control - write data to voutA
+    spi1.write( cfg );
+    Thread::wait(1);
+    cs = 1;
+    Thread::wait(1);
+}
+
+//********************************************** Thread functions **********************************************************
+void Temp_Feedback_Control(void const *args)
+{
     // Init. config
     ADT7320_config(CSac);
     ADT7320_config(CSbd);
@@ -402,7 +396,6 @@ void Switching_Attenuators_Control(void const *arg)
             Switching_set(state);
         }
         Thread::wait(1000);
-        
     }
 }
 
