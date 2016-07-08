@@ -551,7 +551,7 @@ int main()
     err = bsmp_register_variable(bsmp,&dummy[Set_PointACID]);
 
     // Temp_Control
-    Temp_Control[0] = 0;
+    Temp_Control[0] = 1;
     set_var(dummy, Temp_ControlID, true, 1, Temp_Control);
     err = bsmp_register_variable(bsmp,&dummy[Temp_ControlID]);
 
