@@ -60,11 +60,11 @@ uint8_t Temp1[8];
 uint8_t Temp2[8];
 uint8_t Temp3[8];
 uint8_t Temp4[8];
-uint8_t Set_Point1[8];
-uint8_t Set_Point2[8];
+uint8_t Set_PointBD[8];
+uint8_t Set_PointAC[8];
 uint8_t Temp_Control[1];
-uint8_t Output1[8];
-uint8_t Output2[8];
+uint8_t HeaterBD[8];
+uint8_t HeaterAC[8];
 uint8_t Reset[1];
 uint8_t Reprogramming[1];
 uint8_t Data[DataSize];
@@ -218,15 +218,15 @@ void Temp_Feedback_Control(void const *args)
     ADT7320_config(CSac);
     ADT7320_config(CSbd);
 
-    float ProcessValueA, ProcessValueB;
-    double voutA, voutB;
+    float ProcessValueAC, ProcessValueBD;
+    double voutAC, voutBD;
     int state = 2;
-    PID pidA(1.0, 1.0, 1.0, Rate);
-    pidA.setInputLimits(0.0 , 80.0);
-    pidA.setOutputLimits(MinPIDout , MaxPIDout);
-    PID pidB(1.0, 1.0, 1.0, Rate);
-    pidB.setInputLimits(0.0 , 80.0);
-    pidB.setOutputLimits(MinPIDout , MaxPIDout);
+    PID pidAC(1.0, 1.0, 1.0, Rate);
+    pidAC.setInputLimits(0.0 , 80.0);
+    pidAC.setOutputLimits(MinPIDout , MaxPIDout);
+    PID pidBD(1.0, 1.0, 1.0, Rate);
+    pidBD.setInputLimits(0.0 , 80.0);
+    pidBD.setOutputLimits(MinPIDout , MaxPIDout);
 
     while (1) {
         // Read temp from ADT7320 in RFFE_AC
@@ -244,52 +244,53 @@ void Temp_Feedback_Control(void const *args)
                 set_value(Output2,0.0);
             }
         }
-        if ((Temp_Control[0] == 0) && (get_value64(Output1) == 0.0) && (get_value64(Output2) == 0.0)) {
+        if ((Temp_Control[0] == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
             SHDN_temp = 0;
             Thread::wait(int(1000*Rate));
             continue;
-        } else
+        } else {
             SHDN_temp = 1;
+	}
 
         if (Temp_Control[0] == 1) {
             // Calculating the Process Values
-            // Compoundind de process value from the two temperature measure
-            ProcessValueA = (float)( get_value64(Temp2) );
-            // Compoundind de process value from the two temperature measure
-            ProcessValueB = (float)( get_value64(Temp1) );
+            ProcessValueAC = (float)( get_value64(Temp2) );
+            ProcessValueBD = (float)( get_value64(Temp1) );
 
             // Vout A - Output to heater BD
             // Temperature measurements from Temp3 and Temp4
 
-            pidA.setSetPoint((float)get_value64(Set_Point2));
-            pidA.setProcessValue(ProcessValueA);
+            pidAC.setSetPoint((float)get_value64(Set_PointAC));
+            pidAC.setProcessValue(ProcessValueAC);
             // Control output
-            set_value(Output2,pidA.compute());
+            set_value(HeaterAC,pidAC.compute());
 
             // Vout B - Output to heater AC
             // Temperature measurements from Temp1 and Temp2
 
-            pidB.setSetPoint((float)get_value64(Set_Point1));
-            pidB.setProcessValue(ProcessValueB);
+            pidBD.setSetPoint((float)get_value64(Set_PointBD));
+            pidBD.setProcessValue(ProcessValueBD);
             // Control output
-            set_value(Output1,pidB.compute());
+            set_value(HeaterBD,pidBD.compute());
         }
 
         // Update control output
-        if (get_value64(Output2) > MaxPIDout)
-            set_value(Output2, MaxPIDout);
-        if (get_value64(Output1) > MaxPIDout)
-            set_value(Output1, MaxPIDout);
-        if (get_value64(Output2) < MinPIDout)
-            set_value(Output2, MinPIDout);
-        if (get_value64(Output1) < MinPIDout)
-            set_value(Output1, MinPIDout);
+        if (get_value64(HeaterAC) > MaxPIDout)
+            set_value(HeaterAC, MaxPIDout);
+        if (get_value64(HeaterBD) > MaxPIDout)
+            set_value(HeaterBD, MaxPIDout);
+        if (get_value64(HeaterAC) < MinPIDout)
+            set_value(HeaterAC, MinPIDout);
+        if (get_value64(HeaterBD) < MinPIDout)
+            set_value(HeaterBD, MinPIDout);
 
-        voutA = get_value64(Output2);
-        voutB = get_value64(Output1);
-        printf("\n vout(heat AC): %f \n", voutB);
-        printf("\n vout(heat BD): %f \n", voutA);
-        DAC8552_write(CS_dac, voutA, voutB);
+        voutAC = get_value64(HeaterAC);
+        voutBD = get_value64(HeaterBD);
+        printf("\n vout(heat AC): %f \n", voutAC);
+        printf("\n vout(heat BD): %f \n", voutBD);
+
+	DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
+	DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
 
         Thread::wait(int(1000*Rate));
     }
@@ -515,7 +516,7 @@ int main()
     Switching[0] = 0;
     set_var(dummy, SwitchingID, true, 1, Switching);
     err = bsmp_register_variable(bsmp,&dummy[SwitchingID]);
-            
+
     // Att1
     set_value(Att1,30.0);
     set_var(dummy, Att1ID, true, 8, Att1);
@@ -546,30 +547,30 @@ int main()
     set_var(dummy, Temp4ID, false, 8, Temp4);
     err = bsmp_register_variable(bsmp,&dummy[Temp4ID]);
 
-    // Set_Point1
-    set_value(Set_Point1,0.0);
-    set_var(dummy, Set_Point1ID, true, 8, Set_Point1);
-    err = bsmp_register_variable(bsmp,&dummy[Set_Point1ID]);
+    // Set_PointBD
+    set_value(Set_PointBD,0.0);
+    set_var(dummy, Set_PointBDID, true, 8, Set_PointBD);
+    err = bsmp_register_variable(bsmp,&dummy[Set_PointBDID]);
 
-    // Set_Point2
-    set_value(Set_Point2,0.0);
-    set_var(dummy, Set_Point2ID, true, 8, Set_Point2);
-    err = bsmp_register_variable(bsmp,&dummy[Set_Point2ID]);
+    // Set_PointAC
+    set_value(Set_PointAC,0.0);
+    set_var(dummy, Set_PointACID, true, 8, Set_PointAC);
+    err = bsmp_register_variable(bsmp,&dummy[Set_PointACID]);
 
     // Temp_Control
     Temp_Control[0] = 0;
     set_var(dummy, Temp_ControlID, true, 1, Temp_Control);
     err = bsmp_register_variable(bsmp,&dummy[Temp_ControlID]);
 
-    // Output1
-    set_value(Output1,0.0);
-    set_var(dummy, Output1ID, true, 8, Output1);
-    err = bsmp_register_variable(bsmp,&dummy[Output1ID]);
+    // HeaterBD
+    set_value(HeaterBD,0.0);
+    set_var(dummy, HeaterBDID, true, 8, HeaterBD);
+    err = bsmp_register_variable(bsmp,&dummy[HeaterBDID]);
 
-    // Output2
-    set_value(Output2,0.0);
-    set_var(dummy, Output2ID, true, 8, Output2);
-    err = bsmp_register_variable(bsmp,&dummy[Output2ID]);
+    // HeaterAC
+    set_value(HeaterAC,0.0);
+    set_var(dummy, HeaterACID, true, 8, HeaterAC);
+    err = bsmp_register_variable(bsmp,&dummy[HeaterACID]);
 
     // Reset
     Reset[0] = 0;
