@@ -85,10 +85,8 @@ DigitalOut led4(LED4);
 
 // MBED pins
 
-DigitalOut clk_en(p8); // Enable clock for the Switching. LVTTL, low = disable, init = low.Switching
-DigitalIn clk_0(p9); // Input of switching clock. LVTTLReceive switching clock
-DigitalOut dataC(p10); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att1)
-DigitalOut dataA(p11); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att1)
+DigitalOut dataC(p10); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
+DigitalOut dataA(p11); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut clk(p12); // Digital control attenuation. LVTTL, low = reset, init = low.Digital control attenuation
 DigitalOut LE(p13); // Digital control calibration. LVTTL, low = reset, init = low.Digital control calibration
 DigitalOut CSac(p14); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_AC
@@ -97,13 +95,9 @@ DigitalOut sw1(p17);     // Control pin for the RF switch 1
 DigitalOut sw2(p18);    //Control pin for the RF switch 2
 DigitalOut led_g(p19); // Green LED
 DigitalOut led_r(p20); // Red LED
-DigitalOut S2(p21); // Set input of JK2. LVTTL, init = high.Switching
-DigitalOut K2(p22); // K input of JK2. LVTTLSwitching
-DigitalOut J2(p23); // J input of JK2. LVTTLSwitching
-DigitalOut R2(p24); // Reset pin of JK2. LVTTL, init = low.Digital control
 DigitalOut CSbd(p25); // . LVTTL, high = disable, init = high.
-DigitalOut dataB(p26); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att1)
-DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att1)
+DigitalOut dataB(p26); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
+DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut CS_dac(p16); // Chip select for DAC.. LVTTL, low = Selected, init = high.Chip select
 DigitalOut LedY(p29); // Yellow led of the Ethernet connector. LVTTLIndicate transmiting data
 DigitalOut LedG(p30); // Green led of the Ethernet connector. LVTTLIndicate active connection
