@@ -184,7 +184,7 @@ void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
 
     // SPI config
     spi1.frequency(1000000);
-    spi1.format(16,1);
+    spi1.format(16,2);
     cs = 1;
 
     // Calculating data to vout
