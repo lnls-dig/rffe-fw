@@ -57,7 +57,7 @@ void var_read_command_ask(command_header *varread);
 void var_read_command_answer(command_header *varread, int size);
 void var_write_command_ask(command_header *varwrite,int size);
 void ping_command(command_header *ping, int size);
-static void error_commands(command_header *error,int code);
+void error_commands(command_header *error,int code);
 void ok_command(command_header *error);
 void bad_message_command(command_header *error);
 void op_not_supported_command(command_header *error);
@@ -71,7 +71,7 @@ void internal_error_command(command_header *error);
 void message(command_header *recv, command_header *send, var_list * Vars);
 
 void set_value(uint8_t *var, double value);
-void set_value(uint8_t *var, char* value);
+void set_value(uint8_t *var, char const* value);
 unsigned char get_value8(variable_header *var);
 int get_value32(variable_header *var);
 double get_value64(uint8_t *var);

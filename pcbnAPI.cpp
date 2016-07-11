@@ -56,7 +56,7 @@ void ping_command(command_header *ping, int size){
     return;
 }
 
-static void error_commands(command_header *error,int code){
+void error_commands(command_header *error,int code){
     error->command = code;
     error->size = 0x0;
     return;
@@ -192,7 +192,7 @@ void set_value(uint8_t *var, double value){
     return;
 }
 
-void set_value(uint8_t *var, char* value){
+void set_value(uint8_t *var, char const* value){
     memcpy(var,value,8);
 }
 
