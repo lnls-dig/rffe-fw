@@ -22,53 +22,55 @@ extern "C" {
 #define SERVER_PORT 6791
 
 //Variables ID's
-#define SwitchingID 0
-#define Att1ID 1
-#define Att2ID 2
-#define Temp1ID 3
-#define Temp2ID 4
-#define Temp3ID 5
-#define Temp4ID 6
-#define Set_Point1ID 7
-#define Set_Point2ID 8
-#define Temp_ControlID 9
-#define Output1ID 10
-#define Output2ID 11
-#define ResetID 12
-#define ReprogrammingID 13
-#define DataID 14
-#define VersionID 15
-#define Switch_LevelID 16
-#define VarCount 17
+#define AttID           0
+#define TempACID        1
+#define TempBDID        2
+#define Set_PointACID   3
+#define Set_PointBDID   4
+#define Temp_ControlID  5
+#define HeaterACID      6
+#define HeaterBDID      7
+#define ResetID         8
+#define ReprogrammingID 9
+#define DataID          10
+#define VersionID       11
+#define PID_AC_KcID     12
+#define PID_AC_tauIID   13
+#define PID_AC_tauDID   14
+#define PID_BD_KcID     15
+#define PID_BD_tauIID   16
+#define PID_BD_tauDID   17
+#define VarCount        18
 
 // Constants
-#define Rate 1.0
-#define MaxPIDout 3.3
-#define MinPIDout 0.0
-#define Refin 3.3
-#define DataSize 127
+#define Rate		1.0
+#define MaxPIDout	3.3
+#define MinPIDout	0.0
+#define Refin		3.3
+#define DataSize	127
 
 extern "C" void mbed_reset();
 
 // Struct of the variables
 struct bsmp_var dummy[VarCount];
-uint8_t Switching[1];
-uint8_t Switch_Level[1];
-uint8_t Att1[8];
-uint8_t Att2[8];
-uint8_t Temp1[8];
-uint8_t Temp2[8];
-uint8_t Temp3[8];
-uint8_t Temp4[8];
-uint8_t Set_PointBD[8];
+uint8_t Att[8];
+uint8_t TempAC[8];
+uint8_t TempBD[8];
 uint8_t Set_PointAC[8];
+uint8_t Set_PointBD[8];
 uint8_t Temp_Control[1];
-uint8_t HeaterBD[8];
 uint8_t HeaterAC[8];
+uint8_t HeaterBD[8];
 uint8_t Reset[1];
 uint8_t Reprogramming[1];
 uint8_t Data[DataSize];
 uint8_t Version[8];
+uint8_t PID_AC_Kc[8];
+uint8_t PID_AC_tauI[8];
+uint8_t PID_AC_tauD[8];
+uint8_t PID_BD_Kc[8];
+uint8_t PID_BD_tauI[8];
+uint8_t PID_BD_tauD[8];
 
 LocalFileSystem localdir("local");               // Create the local filesystem under the name "local"
 FILE *fp;
@@ -214,42 +216,51 @@ void Temp_Feedback_Control(void const *args)
 
     float ProcessValueAC, ProcessValueBD;
     double voutAC, voutBD;
+
     int state = 2;
+
+    /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
     PID pidAC(1.0, 1.0, 1.0, Rate);
     pidAC.setInputLimits(0.0 , 80.0);
     pidAC.setOutputLimits(MinPIDout , MaxPIDout);
+
     PID pidBD(1.0, 1.0, 1.0, Rate);
     pidBD.setInputLimits(0.0 , 80.0);
     pidBD.setOutputLimits(MinPIDout , MaxPIDout);
 
     while (1) {
         // Read temp from ADT7320 in RFFE_AC
-        set_value(Temp1,ADT7320_read(CSac));
+        set_value(TempAC,ADT7320_read(CSac));
 
-        // Read temp from ADT7320 in RFFE_BD
-        set_value(Temp2,ADT7320_read(CSbd));
+        // Read temp from ADT720 in RFFE_BD
+        set_value(TempBD,ADT7320_read(CSbd));
 
-        //printf("\n Temp1(RFFE_AC): %f\n Temp2(RFFE_BD): %f\n",get_value64(Temp1),get_value64(Temp2));
+	// Update PID tuning values
+	pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
+	pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
 
         if (state != Temp_Control[0]) {
             state = Temp_Control[0];
             if (Temp_Control[0] == 0) {
                 set_value(Output1,0.0);
                 set_value(Output2,0.0);
+                Thread::wait(int(1000*2*Rate));
+                continue;
             }
         }
         if ((Temp_Control[0] == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
             SHDN_temp = 0;
+            led4 = 1;
             Thread::wait(int(1000*Rate));
             continue;
         } else {
             SHDN_temp = 1;
-	}
+        }
 
         if (Temp_Control[0] == 1) {
             // Calculating the Process Values
-            ProcessValueAC = (float)( get_value64(Temp2) );
-            ProcessValueBD = (float)( get_value64(Temp1) );
+            ProcessValueAC = (float)( get_value64(TempAC) );
+            ProcessValueBD = (float)( get_value64(TempBD) );
 
             // Vout A - Output to heater BD
             // Temperature measurements from Temp3 and Temp4
@@ -260,12 +271,17 @@ void Temp_Feedback_Control(void const *args)
             set_value(HeaterAC,pidAC.compute());
 
             // Vout B - Output to heater AC
-            // Temperature measurements from Temp1 and Temp2
+            // Temperature measurements from TempBD and TempAC
 
             pidBD.setSetPoint((float)get_value64(Set_PointBD));
             pidBD.setProcessValue(ProcessValueBD);
             // Control output
             set_value(HeaterBD,pidBD.compute());
+            voutAC = get_value64(HeaterAC);
+            voutBD = get_value64(HeaterBD);
+            printf("PID vout(heat AC): %f TempAC: %f\n", voutAC, ProcessValueAC);
+            printf("PID vout(heat BD): %f TempBD: %f\n\n", voutBD, ProcessValueBD);
+
         }
 
         // Update control output
@@ -280,43 +296,11 @@ void Temp_Feedback_Control(void const *args)
 
         voutAC = get_value64(HeaterAC);
         voutBD = get_value64(HeaterBD);
-        printf("\n vout(heat AC): %f \n", voutAC);
-        printf("\n vout(heat BD): %f \n", voutBD);
 
-	DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
-	DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
+        DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
+        DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
 
         Thread::wait(int(1000*Rate));
-    }
-}
-
-void Switching_set(int state)
-{
-    switch (state) {
-        case 0:
-            // Initial state: switches on the direct position
-            sw1 = 1;
-            sw2 = 1;
-            // Leds show the switch state
-            led1 = 0;
-            led2 = 0;
-            led_g=1;
-            led_r=0;
-            //printf("\nSwitches direct\n");
-            break;
-
-        case 1:
-            // Set switches on the inverse position
-            led_g=0;
-            led_r=1;
-            sw1 = 0;
-            sw2 = 0;
-
-            led1 = 0;
-            led2 = 1;
-            //printf("\nSwitches inverted\n");
-            break;
-
     }
 }
 
@@ -344,13 +328,9 @@ void Clk_att(void const *arg)
 
 void Switching_Attenuators_Control(void const *arg)
 {
-    int state = 4;
-    double prev_att1 = get_value64(Att1)+1;
-    double prev_att2 = get_value64(Att2)+1;
+    double prev_att1 = get_value64(Att)+1;
     bool attVec1[6];
-    bool attVec2[6];
     RtosTimer Clock_thread(Clk_att);
-
 
     while (1) {
 
@@ -361,17 +341,15 @@ void Switching_Attenuators_Control(void const *arg)
             LedY = 0;
 
         // Attenuators set
-        if ( (prev_att1 != get_value64(Att1)) || (prev_att2 != get_value64(Att2))) {
+        if ( prev_att1 != get_value64(Att) ) {
             // Checking and setting attenuators value to fisable values
-            set_value(Att1,(float)(int(get_value64(Att1)*2))/2);
-            set_value(Att2,(float)(int(get_value64(Att2)*2))/2);
+            set_value(Att,(float)(int(get_value64(Att)*2))/2);
             // Updating previous values
-            prev_att1 = get_value64(Att1);
-            prev_att2 = get_value64(Att2);
-            //printf("\nAtt values requested: \n Att1: %f \n Att2: %f.\n",prev_att1,prev_att2);
-            //printf("\nAtt values updated to: \n Att1: %f \n Att2: %f.\n",(float)(int(prev_att1*2))/2,(float)(int(prev_att2*2))/2);
+            prev_att1 = get_value64(Att);
+            //printf("\nAtt values requested: \n Att: %f \n Att2: %f.\n",prev_att1,prev_att2);
+            //printf("\nAtt values updated to: \n Att: %f \n Att2: %f.\n",(float)(int(prev_att1*2))/2,(float)(int(prev_att2*2))/2);
             int2bin6(int(prev_att1*2), attVec1);
-            int2bin6(int(prev_att2*2), attVec2);
+
             LE = 0;
             clk = 0;
             Clock_thread.start(10);
@@ -388,12 +366,6 @@ void Switching_Attenuators_Control(void const *arg)
             Thread::wait(1);
             LE = 0;
             Clock_thread.stop();
-        }
-//        Switching_set(3);
-        // Switching set
-        if (state != Switching[0]) {
-            state = Switching[0];
-            Switching_set(state);
         }
         Thread::wait(1000);
     }
@@ -505,48 +477,28 @@ int main()
     led_r=0;
     // Variables initialization
 
-    // Switching
-    Switching[0] = 0;
-    set_var(dummy, SwitchingID, true, 1, Switching);
-    err = bsmp_register_variable(bsmp,&dummy[SwitchingID]);
+    // Att
+    set_value(Att,30.0);
+    set_var(dummy, AttID, true, 8, Att);
+    err = bsmp_register_variable(bsmp,&dummy[AttID]);
 
-    // Att1
-    set_value(Att1,30.0);
-    set_var(dummy, Att1ID, true, 8, Att1);
-    err = bsmp_register_variable(bsmp,&dummy[Att1ID]);
+    // TempBD
+    set_value(TempBD,0.0);
+    set_var(dummy, TempBDID, false, 8, TempBD);
+    err = bsmp_register_variable(bsmp,&dummy[TempBDID]);
 
-    // Att2
-    set_value(Att2,30.0);
-    set_var(dummy, Att2ID, true, 8, Att2);
-    err = bsmp_register_variable(bsmp,&dummy[Att2ID]);
-
-    // Temp1
-    set_value(Temp1,0.0);
-    set_var(dummy, Temp1ID, false, 8, Temp1);
-    err = bsmp_register_variable(bsmp,&dummy[Temp1ID]);
-
-    // Temp2
-    set_value(Temp2,0.0);
-    set_var(dummy, Temp2ID, false, 8, Temp2);
-    err = bsmp_register_variable(bsmp,&dummy[Temp2ID]);
-
-    // Temp3
-    set_value(Temp3,0.0);
-    set_var(dummy, Temp3ID, false, 8, Temp3);
-    err = bsmp_register_variable(bsmp,&dummy[Temp3ID]);
-
-    // Temp4
-    set_value(Temp4,0.0);
-    set_var(dummy, Temp4ID, false, 8, Temp4);
-    err = bsmp_register_variable(bsmp,&dummy[Temp4ID]);
+    // TempAC
+    set_value(TempAC,0.0);
+    set_var(dummy, TempACID, false, 8, TempAC);
+    err = bsmp_register_variable(bsmp,&dummy[TempACID]);
 
     // Set_PointBD
-    set_value(Set_PointBD,0.0);
+    set_value(Set_PointBD,51.5);
     set_var(dummy, Set_PointBDID, true, 8, Set_PointBD);
     err = bsmp_register_variable(bsmp,&dummy[Set_PointBDID]);
 
     // Set_PointAC
-    set_value(Set_PointAC,0.0);
+    set_value(Set_PointAC,51.5);
     set_var(dummy, Set_PointACID, true, 8, Set_PointAC);
     err = bsmp_register_variable(bsmp,&dummy[Set_PointACID]);
 
@@ -585,10 +537,33 @@ int main()
     set_var(dummy, VersionID, false, 8, Version);
     err = bsmp_register_variable(bsmp,&dummy[VersionID]);
 
-    // Switch_Level
-    Switch_Level[0] = 0;
-    set_var(dummy, Switch_LevelID, true, 1, Switch_Level);
-    err = bsmp_register_variable(bsmp,&dummy[Switch_LevelID]);
+    //PID_AC Kc parameter
+    set_var(dummy, PID_AC_KcID, true, 8, PID_AC_Kc);
+    err = bsmp_register_variable(bsmp,&dummy[PID_AC_KcID]);
+
+    //PID_AC tauI parameter
+    set_var(dummy, PID_AC_tauIID, true, 8, PID_AC_tauI);
+    err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauIID]);
+
+    //PID_AC tauI parameter
+    set_var(dummy, PID_AC_tauDID, true, 8, PID_AC_tauD);
+    err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauDID]);
+
+    //PID_BD Kc parameter
+    set_var(dummy, PID_BD_KcID, true, 8, PID_BD_Kc);
+    err = bsmp_register_variable(bsmp,&dummy[PID_BD_KcID]);
+
+    //PID_BD tauI parameter
+    set_var(dummy, PID_BD_tauIID, true, 8, PID_BD_tauI);
+    err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauIID]);
+
+    //PID_BD tauI parameter
+    set_var(dummy, PID_BD_tauDID, true, 8, PID_BD_tauD);
+    err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauDID]);
+
+    if (err){
+        //Handle Error
+    }
 
     int s,numVer;
     uint8_t state = 0;
@@ -631,10 +606,10 @@ int main()
     // *************************************Threads***************************************
 
     Thread Switching_Attenuators_thread(Switching_Attenuators_Control);
-    printf("\nSwitching_Attenuators_thread\n");
+    printf("Switching_Attenuators_thread\n");
 
     Thread Temp_Control_thread(Temp_Feedback_Control);
-    printf("\nTemp_Control_thread\n");
+    printf("Temp_Control_thread\n");
 
     //Thread Serial_Interface_thread(Serial_Interface, NULL, osPriorityNormal, 256 * 4);;
     //printf("\nSerial_USB_thread\n");
