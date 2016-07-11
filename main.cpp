@@ -451,7 +451,11 @@ void Serial_Interface(void const*)
 
 int main()
 {
+    //Init serial port for info printf
+    pc.baud(115200);
+    printf("RFFE Control Firmware\n");
     // Setup of variables
+
     enum bsmp_err err;
     bsmp_server_t *bsmp = bsmp_server_new();
     led_g=0;
