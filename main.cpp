@@ -176,8 +176,8 @@ void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
     // 1 0 0 1 (0x9000)     12 bits      B      Input register and DAC register updated, output updated
     // 1 0 1 0 (0xA000)     12 bits      C      Input register and DAC register updated, output updated
     // 1 0 1 1 (0xB000)     12 bits      D      Input register and DAC register updated, output updated
-    // vout = Refin * data  / 4096
-    // data = vout * 4096 / Refin
+    // vout = Refin * data  / 4095
+    // data = vout * 4095 / Refin
 
     uint16_t data;
     uint16_t cfg;
@@ -188,7 +188,7 @@ void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
     cs = 1;
 
     // Calculating data to vout
-    data = (uint16_t)(vout*4096/Refin);
+    data = (uint16_t)(vout*4095/Refin);
     cfg = ( dac_sel << 12 ) | ( data & 0x0FFF );
 
     // Transmition
