@@ -401,13 +401,13 @@ void Update_Software(char * old_name, char * name)
 {
     char path[15] = "/local/";
     if (fopen((char*)strcat(path,name),"rb") == NULL) {
-        printf("\nNew firmare not found\n");
+        printf("New firmare not found\n");
         return;
     }
-    printf("\nReprogramming...\n");
+    printf("Reprogramming...\n");
     strcpy(path,"/local/");
     remove((char*)strcat(path,old_name));
-    printf("\nReseting...\n");
+    printf("Reseting...\n");
     mbed_reset();
 
 }
@@ -554,20 +554,20 @@ int main()
     uint8_t state = 0;
 
     /*
-    for (s = 0; s < VarCount; s++) {
-        printf("\nId: %d",dummy[s].info.id);
-        printf("\nWritable: %d",dummy[s].info.writable);
-        printf("\nSize: %d bytes",dummy[s].info.size);
-        if (dummy[s].info.size == 1) {
-            printf("\nValue: %d",*dummy[s].data);
-        } else {
-            if (s != VersionID)
-                printf("\nValue: %f",get_value64(dummy[s].data));
-            else
-                printf("\nValue: %s",dummy[s].data);
-        }
-        printf("\n");
-    }
+      for (s = 0; s < VarCount; s++) {
+      printf("\nId: %d",dummy[s].info.id);
+      printf("\nWritable: %d",dummy[s].info.writable);
+      printf("\nSize: %d bytes",dummy[s].info.size);
+      if (dummy[s].info.size == 1) {
+      printf("\nValue: %d",*dummy[s].data);
+      } else {
+      if (s != VersionID)
+      printf("\nValue: %f",get_value64(dummy[s].data));
+      else
+      printf("\nValue: %s",dummy[s].data);
+      }
+      printf("\n");
+      }
     */
 
     struct bsmp_raw_packet request;
@@ -585,7 +585,7 @@ int main()
             numVer = check_name(p->d_name);
         }
     }
-    printf("\old_name: %s\n",old_name);
+    //printf("old_name: %s\n",old_name);
     closedir(d);
 
     // *************************************Threads***************************************
@@ -600,7 +600,6 @@ int main()
     //printf("\nSerial_USB_thread\n");
 
     // Ethernet initialization
-
 #if defined(ETH_DHCP)
     EthernetInterface::init(); //Use DHCP
 #else
@@ -612,14 +611,13 @@ int main()
     TCPSocketConnection client;
     TCPSocketServer server;
 
-    printf("\n Trying to establish connection...\n");
+    printf("Trying to establish connection...\n");
     while (EthernetInterface::connect(5000)) {
-        printf("\n Connection failure\n");
+        //printf("Connection failure\n");
     }
-    printf("\nConnected\n");
+    printf("Connected\n");
 
     while (true) {
-
         led3 = 1;
 
         server.bind(SERVER_PORT);
@@ -628,7 +626,7 @@ int main()
         printf("    IP Address is %s\n", EthernetInterface::getIPAddress());
         printf("    MAC Address is %s\n", EthernetInterface::getMACAddress());
         printf("    port %d\n", SERVER_PORT);
-        printf("\n Wait for new client connection...\n");
+        printf(" Wait for new client connection...\n");
         server.accept(client);
         client.set_blocking(false, 1500); // Timeout after (1.5)s
 
@@ -720,18 +718,18 @@ int main()
 
             LedG = 0;
         }
-        //printf("\nDisconnected: %d\n",eth.disconnect());
+        //printf("Disconnected: %d\n",eth.disconnect());
         client.close();
         server.close();
         if (!get_eth_link_status()) {
             EthernetInterface::disconnect();
-            printf("\n Trying to establish connection...\n");
+            printf(" Trying to establish connection...\n");
             while (EthernetInterface::connect(5000)) {
-                printf("\n Connection failure\n");
+                printf(" Connection failure\n");
             }
-            printf("\nConnected\n");
+            printf("Connected\n");
         }
-        printf("\nClient disconnected\n");
+        printf("Client disconnected\n");
         led4 = 0;
         led3 = 0;
     }
