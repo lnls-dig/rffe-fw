@@ -116,29 +116,25 @@ void ADT7320_config(mbed::DigitalOut cs)
 {
     spi1.frequency(1000000);
     cs = 1;
-    Thread::wait(1);
-    cs = 0;
 
-    // Reseting SPI interface
+    /* Reseting SPI interface - Write 32 1's to the IC */
     spi1.format(16,3);
+    cs = 0;
+    Thread::wait(1);
     spi1.write(0xFFFF);
     spi1.write(0xFFFF);
-    spi1.write(0xFFFF);
-
     Thread::wait(1);
     cs = 1;
 
+    // Configuration process
     spi1.format(8,3);
-
     cs = 0;
     Thread::wait(1);
 
-    // Configuration process
-
-    // CONFIGURATION REGISTER (16 bits) – 0x01
+    // Select CONFIGURATION REGISTER – 0x01
     spi1.write(0x08);
 
-    // COMMUNICATIONS REGISTER (8bits) setting to 16-bit resolution
+    // Write data to configuration register ( 16-bits resolution + continuous conversion )
     spi1.write(0x80);
 
     Thread::wait(1);
@@ -148,7 +144,7 @@ void ADT7320_config(mbed::DigitalOut cs)
 
 double ADT7320_read(mbed::DigitalOut cs)
 {
-    int data;
+    uint16_t data;
     int reference = 0;
     double delta = 128;
     double temp;
@@ -158,8 +154,10 @@ double ADT7320_read(mbed::DigitalOut cs)
     spi1.format(16,3);
 
     cs = 0;
-    spi1.write(0x50);
-    data = spi1.write(0x00);
+    Thread::wait(1);
+    // Select Temperature value register
+    spi1.write(0x0050);
+    data = spi1.write(0x0000);
     cs = 1;
     //printf("\nFrom slave: %X\n", data);
     temp = (float(data)-reference)/delta;
