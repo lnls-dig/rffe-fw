@@ -373,19 +373,6 @@ void set_var(bsmp_var * dummy, int ID, bool writable, int size, uint8_t * value)
     dummy[ID].data = value;
 }
 
-void echo_command(char * cmd)
-{
-    if (cmd[0] == 0x20) {
-        printf("\nId: %d",dummy[cmd[3]].info.id);
-        if (dummy[cmd[3]].info.size == 1) {
-            printf("\nValue: %d",*dummy[cmd[3]].data);
-        } else {
-            printf("\nValue: %f",get_value64(dummy[cmd[3]].data));
-        }
-        printf("\n");
-    }
-}
-
 int check_name(char * name)
 {
     if ((name[0] == 'V') && isdigit(name[1]) && (name[2] == '_') && isdigit(name[3]) && isdigit(name[4]) && isdigit(name[5]) && isdigit(name[6]))
