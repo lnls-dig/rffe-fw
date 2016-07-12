@@ -249,7 +249,7 @@ void Temp_Feedback_Control(void const *args)
             SHDN_temp = 1;
         }
 
-        if (Temp_Control[0] == 1) {
+        if (Temp_Control[0] != 0) {
             // Calculating the Process Values
             ProcessValueAC = (float)( get_value64(TempAC) );
             ProcessValueBD = (float)( get_value64(TempBD) );
