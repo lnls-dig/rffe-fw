@@ -575,80 +575,93 @@ int main()
     Thread Temp_Control_thread(Temp_Feedback_Control);
     printf("Initializing Temp Control thread\n");
 
+    // Ethernet initialization
+    EthernetInterface eth;
+    TCPSocketConnection client;
+    TCPSocketServer server;
+    int recv_sz, sent_sz;
 
     // Ethernet initialization
 #if defined(ETH_DHCP)
-    EthernetInterface::init(); //Use DHCP
+    eth.init(); //Use DHCP
 #else
 #if defined(ETH_FIXIP)
-    EthernetInterface::init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use  these parameters for static IP
+    eth.init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use  these parameters for static IP
 #endif
 #endif
 
-    TCPSocketConnection client;
-    TCPSocketServer server;
-
-    printf("Trying to establish connection...\n");
-    while (EthernetInterface::connect(5000)) {
-        //printf("Connection failure\n");
-    }
-    printf("Connected\n");
+    LedY = 0;
 
     while (true) {
-        led3 = 1;
+        printf("Trying to bring up ethernet connection... ");
+        while (eth.connect(5000) != 0) {
+            printf("Attempt failed. Trying again... \n");
+        }
+        printf("Success! RFFE eth server is up!\n");
+
+        printf("RFFE IP: %s\n", eth.getIPAddress());
+        printf("RFFE MAC Address: %s\n", eth.getMACAddress());
+        printf("Listenning on port %d...\n", SERVER_PORT);
 
         server.bind(SERVER_PORT);
         server.listen();
 
-        printf("    IP Address is %s\n", EthernetInterface::getIPAddress());
-        printf("    MAC Address is %s\n", EthernetInterface::getMACAddress());
-        printf("    port %d\n", SERVER_PORT);
-        printf(" Wait for new client connection...\n");
-        server.accept(client);
-        client.set_blocking(false, 1500); // Timeout after (1.5)s
+        while (true) {
+            printf(" Waiting for new client connection...\n");
 
-        printf("Connection from client: %s\n", client.get_address());
-        printf("port: %d\n", client.get_port());
-        while (client.is_connected() && LedY) {
-            led4 = 1;
-            s = client.receive((char*)buf, BUFSIZE);
-            LedG = 1;
-            Thread::wait(10);
-            if (s <= 0) {
-                LedG = 0;
-                continue;
-            }
+            server.accept(client);
+            client.set_blocking(false, 1500); // Timeout after (1.5)s
+            //client.set_blocking(true); // Timeout after (1.5)s
 
-            /*
-            printf("\nMsg recebida de %d bytes: ", s);
-            for (int i = 0; i < s; i++)
-                printf("%x ",(char*)buf[i]);
-            printf("\n");
-            */
+            printf("Connection from client: %s\n", client.get_address());
 
-            request.data = buf;
-            request.len = s;
+            while (client.is_connected() && get_eth_link_status()) {
+                /* Turn the conection indicator LED on */
+                LedY = 1;
 
-            response.data = bufresponse;
+                /* Wait to receive data from client */
+                recv_sz = client.receive((char*)buf, BUFSIZE);
+                /* Pulse activity LED */
+                LedG = 1;
 
-            bsmp_process_packet (bsmp,&request,&response);
+                if ( recv_sz <= 0 ) {
+                    printf ("Error in message received from client! (Size = %d)\n", recv_sz);
+                    LedG = 0;
+                    continue;
+                }
 
-            s = client.send((char*)response.data, response.len);
+#ifdef DEBUG_PRINTF
+                printf("Received message of %d bytes: ", recv_sz);
+                for (int i = 0; i < recv_sz; i++) {
+                    printf("0x%X ",buf[i]);
+                }
+                printf("\n");
+#endif
 
-            /*
-            printf("\nMsg enviada de %d bytes: ",s);
-            for (int i = 0; i < s; i++)
-                printf("%x ",(char*)response.data[i]);
-            printf("\n");
-            */
+                request.data = buf;
+                request.len = recv_sz;
 
-            if (s < 0)
-                error("ERROR writing to socket");
+                response.data = bufresponse;
 
-            //echo_command((char*)buf);
+                bsmp_process_packet (bsmp,&request,&response);
 
-            if (state != Reprogramming[0]) {
-                switch (Reprogramming[0]) {
+                sent_sz = client.send((char*)response.data, response.len);
+#ifdef DEBUG_PRINTF
+                printf("Sending message of %d bytes: ", sent_sz);
+                for (int i = 0; i < sent_sz; i++) {
+                    printf("0x%X ",response.data[i]);
+                }
+                printf("\n");
+#endif
+
+                if (sent_sz <= 0) {
+                    printf("ERROR while writing to socket!");
+                    LedG = 0;
+                    continue;
+                }
+#if 0
+                if (state != Reprogramming[0]) {
+                    switch (Reprogramming[0]) {
                     case 0:
                         if (state == 1)
                             fclose(fp);
@@ -656,58 +669,58 @@ int main()
                         break;
 
                     case 1:
-                        /*
-                            DIR *d = opendir("/local");
-                            struct dirent *p;
-                            numVer = 10000;
-                            while((p = readdir(d)) != NULL) {
-                                if (check_name(p->d_name) && check_name(p->d_name) < numVer) {
-                                    strcpy(name, p->d_name);
-                                    numVer = check_name(p->d_name);
-                                }
+                        DIR *d = opendir("/local");
+                        struct dirent *p;
+                        numVer = 10000;
+                        while((p = readdir(d)) != NULL) {
+                            if (check_name(p->d_name) && check_name(p->d_name) < numVer) {
+                                strcpy(name, p->d_name);
+                                numVer = check_name(p->d_name);
                             }
-                            closedir(d);
-                        */
+                        }
+                        closedir(d);
                         strcpy(name,old_name);
                         strcpy(path,"/local/");
                         int2str(&name[3],(str2int(&old_name[3])%9999+1));
-                        printf("\name: %s\n",name);
+                        printf("name: %s\n",name);
                         fp = fopen((char*)strcat(path,name), "wb");
                         state = Reprogramming[0];
                         break;
 
                     case 2:
-                        if (state == 1)
+                        if (state == 1) {
                             fclose(fp);
+                        }
                         state = Reprogramming[0];
-                        printf("\ndebug1\n");
                         Update_Software(old_name, name);
                         break;
 
+                    }
                 }
+
+                if ((Reprogramming[0] == 1) && (buf[0] == 0x20) && (buf[3] == DataID)) {
+                    Data_Check();
+                }
+#endif
+                if (Reset[0] == 1) {
+                    mbed_reset();
+                }
+
+                LedG = 0;
             }
 
-            if ((Reprogramming[0] == 1) && (buf[0] == 0x20) && (buf[3] == DataID))
-                Data_Check();
+            client.close();
 
-            if (Reset[0] == 1)
-                mbed_reset();
-
+            printf("Client Disconnected!\n");
             LedG = 0;
-        }
-        //printf("Disconnected: %d\n",eth.disconnect());
-        client.close();
-        server.close();
-        if (!get_eth_link_status()) {
-            EthernetInterface::disconnect();
-            printf(" Trying to establish connection...\n");
-            while (EthernetInterface::connect(5000)) {
-                printf(" Connection failure\n");
+
+            if (get_eth_link_status() == 0) {
+                /* Eth link is down, clean-up server connection */
+                server.close();
+                eth.disconnect();
+                LedY = 0;
+                break;
             }
-            printf("Connected\n");
         }
-        printf("Client disconnected\n");
-        led4 = 0;
-        led3 = 0;
     }
 }
