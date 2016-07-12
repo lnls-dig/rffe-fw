@@ -43,11 +43,11 @@ extern "C" {
 #define VarCount        18
 
 // Constants
-#define Rate		1.0
-#define MaxPIDout	3.3
-#define MinPIDout	0.0
-#define Refin		3.3
-#define DataSize	127
+#define Rate            1.0
+#define MaxPIDout       3.3
+#define MinPIDout       0.0
+#define Refin           3.3
+#define DataSize        127
 
 extern "C" void mbed_reset();
 
@@ -88,19 +88,17 @@ DigitalOut led4(LED4);
 DigitalOut dataC(p10); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut dataA(p11); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut clk(p12); // Digital control attenuation. LVTTL, low = reset, init = low.Digital control attenuation
-DigitalOut LE(p13); // Digital control calibration. LVTTL, low = reset, init = low.Digital control calibration
+DigitalOut LE(p13); // Chip select for RFFE attenuators (all channels). LVTTL, low = reset, init = low.Digital control calibration
 DigitalOut CSac(p14); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_AC
-DigitalOut SHDN_temp(p15); // Shut down the temperature current boost output amplifier. LVTTL, low = disable, init = low.Digital control
-DigitalOut sw1(p17);     // Control pin for the RF switch 1
-DigitalOut sw2(p18);    //Control pin for the RF switch 2
+DigitalOut SHDN_temp(p15); // Shut down the temperature current boost output amplifier. LVTTL, low = disable, init = low.
 DigitalOut led_g(p19); // Green LED
 DigitalOut led_r(p20); // Red LED
-DigitalOut CSbd(p25); // . LVTTL, high = disable, init = high.
-DigitalOut dataB(p26); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
-DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
-DigitalOut CS_dac(p16); // Chip select for DAC.. LVTTL, low = Selected, init = high.Chip select
-DigitalOut LedY(p29); // Yellow led of the Ethernet connector. LVTTLIndicate transmiting data
-DigitalOut LedG(p30); // Green led of the Ethernet connector. LVTTLIndicate active connection
+DigitalOut CSbd(p25); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_BD
+DigitalOut dataB(p26); // Data line to attenuator. LVTTL, low = reset, init = low. Set RF attenuators (Att)
+DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = low. Set RF attenuators (Att)
+DigitalOut CS_dac(p16); // Chip select for DAC. LVTTL, low = Selected, init = high.Chip select
+DigitalOut LedY(p29); // Yellow led of the Ethernet connector. LVTTLIndicate active connection
+DigitalOut LedG(p30); // Green led of the Ethernet connector. LVTTLIndicate transmiting data
 Serial pc(USBTX, USBRX);
 
 // spi(mosi, miso, sclk)
@@ -424,34 +422,6 @@ void Data_Check()
     }
 }
 
-void Serial_Interface(void const*)
-{
-    USBHostSerial serial;
-
-    while(1) {
-
-        // try to connect a serial device
-        while(!serial.connect())
-            Thread::wait(500);
-
-        // in a loop, print all characters received
-        // if the device is disconnected, we try to connect it again
-        while (1) {
-
-            // if device disconnected, try to connect it again
-            if (!serial.connected())
-                break;
-
-            // print characters received
-            while (serial.available()) {
-                printf("%c", serial.getc());
-            }
-
-            Thread::wait(50);
-        }
-    }
-}
-
 int main()
 {
     //Init serial port for info printf
@@ -605,8 +575,6 @@ int main()
     Thread Temp_Control_thread(Temp_Feedback_Control);
     printf("Temp_Control_thread\n");
 
-    //Thread Serial_Interface_thread(Serial_Interface, NULL, osPriorityNormal, 256 * 4);;
-    //printf("\nSerial_USB_thread\n");
 
     // Ethernet initialization
 #if defined(ETH_DHCP)
