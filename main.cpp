@@ -249,7 +249,9 @@ void Temp_Feedback_Control(void const *args)
         }
 
         if (Temp_Control[0] != 0) {
+#ifdef DEBUG_PRINTF
             printf( "\tPID Control enabled\n" );
+#endif
             // Calculating the Process Values
             ProcessValueAC = (float)( get_value64(TempAC) );
             ProcessValueBD = (float)( get_value64(TempBD) );
@@ -272,7 +274,9 @@ void Temp_Feedback_Control(void const *args)
             voutAC = get_value64(HeaterAC);
             voutBD = get_value64(HeaterBD);
         } else {
+#ifdef DEBUG_PRINTF
             printf("\tManual temperature control enabled!\n");
+#endif
         }
 
         // Update control output
@@ -287,10 +291,6 @@ void Temp_Feedback_Control(void const *args)
 
         voutAC = get_value64(HeaterAC);
         voutBD = get_value64(HeaterBD);
-
-        printf("Writing to DAC:\n");
-        printf("\t Vout(heat AC): %f TempAC: %f\n", voutAC, get_value64(TempAC));
-        printf("\t Vout(heat BD): %f TempBD: %f\n\n", voutBD, get_value64(TempBD));
 
         DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
         DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
@@ -569,11 +569,11 @@ int main()
 
     // *************************************Threads***************************************
 
-    Thread Switching_Attenuators_thread(Switching_Attenuators_Control);
-    printf("Switching_Attenuators_thread\n");
+    Thread Attenuators_thread(Attenuators_Control);
+    printf("Initializing Attenuators thread\n");
 
     Thread Temp_Control_thread(Temp_Feedback_Control);
-    printf("Temp_Control_thread\n");
+    printf("Initializing Temp Control thread\n");
 
 
     // Ethernet initialization
