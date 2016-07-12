@@ -212,13 +212,13 @@ void Temp_Feedback_Control(void const *args)
     int state = 2;
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
-    PID pidAC(1.0, 1.0, 1.0, Rate);
-    pidAC.setInputLimits(0.0 , 80.0);
-    pidAC.setOutputLimits(MinPIDout , MaxPIDout);
+    PID pidAC( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD), Rate );
+    pidAC.setInputLimits( 0.0 , 100.0 );
+    pidAC.setOutputLimits( MinPIDout , MaxPIDout );
 
-    PID pidBD(1.0, 1.0, 1.0, Rate);
-    pidBD.setInputLimits(0.0 , 80.0);
-    pidBD.setOutputLimits(MinPIDout , MaxPIDout);
+    PID pidBD( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD), Rate );
+    pidBD.setInputLimits( 0.0 , 100.0 );
+    pidBD.setOutputLimits( MinPIDout, MaxPIDout );
 
     while (1) {
         // Read temp from ADT7320 in RFFE_AC
@@ -227,9 +227,9 @@ void Temp_Feedback_Control(void const *args)
         // Read temp from ADT720 in RFFE_BD
         set_value(TempBD,ADT7320_read(CSbd));
 
-	// Update PID tuning values
-	pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
-	pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
+        // Update PID tuning values
+        pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
+        pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
 
         if (state != Temp_Control[0]) {
             state = Temp_Control[0];
