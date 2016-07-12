@@ -521,26 +521,32 @@ int main()
     err = bsmp_register_variable(bsmp,&dummy[VersionID]);
 
     //PID_AC Kc parameter
+    set_value(PID_AC_Kc, 1.0);
     set_var(dummy, PID_AC_KcID, true, 8, PID_AC_Kc);
     err = bsmp_register_variable(bsmp,&dummy[PID_AC_KcID]);
 
     //PID_AC tauI parameter
+    set_value(PID_AC_tauI, 1.0);
     set_var(dummy, PID_AC_tauIID, true, 8, PID_AC_tauI);
     err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauIID]);
 
     //PID_AC tauI parameter
+    set_value(PID_AC_tauD, 1.0);
     set_var(dummy, PID_AC_tauDID, true, 8, PID_AC_tauD);
     err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauDID]);
 
     //PID_BD Kc parameter
+    set_value(PID_BD_Kc, 1.0);
     set_var(dummy, PID_BD_KcID, true, 8, PID_BD_Kc);
     err = bsmp_register_variable(bsmp,&dummy[PID_BD_KcID]);
 
     //PID_BD tauI parameter
+    set_value(PID_BD_tauI, 1.0);
     set_var(dummy, PID_BD_tauIID, true, 8, PID_BD_tauI);
     err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauIID]);
 
     //PID_BD tauI parameter
+    set_value(PID_BD_tauD, 1.0);
     set_var(dummy, PID_BD_tauDID, true, 8, PID_BD_tauD);
     err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauDID]);
 
