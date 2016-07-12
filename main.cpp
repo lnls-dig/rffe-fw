@@ -232,11 +232,12 @@ void Temp_Feedback_Control(void const *args)
         pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
 
         if (state != Temp_Control[0]) {
+            printf ("New temp_control state : %d\n", Temp_Control[0]);
             state = Temp_Control[0];
             if (Temp_Control[0] == 0) {
-                set_value(Output1,0.0);
-                set_value(Output2,0.0);
-                Thread::wait(int(1000*2*Rate));
+                printf("Automatic temperature control disabled!\n");
+                set_value(HeaterAC,0.0);
+                set_value(HeaterBD,0.0);
                 continue;
             }
         }
@@ -250,6 +251,7 @@ void Temp_Feedback_Control(void const *args)
         }
 
         if (Temp_Control[0] != 0) {
+            printf( "\tPID Control enabled\n" );
             // Calculating the Process Values
             ProcessValueAC = (float)( get_value64(TempAC) );
             ProcessValueBD = (float)( get_value64(TempBD) );
@@ -271,9 +273,8 @@ void Temp_Feedback_Control(void const *args)
             set_value(HeaterBD,pidBD.compute());
             voutAC = get_value64(HeaterAC);
             voutBD = get_value64(HeaterBD);
-            printf("PID vout(heat AC): %f TempAC: %f\n", voutAC, ProcessValueAC);
-            printf("PID vout(heat BD): %f TempBD: %f\n\n", voutBD, ProcessValueBD);
-
+        } else {
+            printf("\tManual temperature control enabled!\n");
         }
 
         // Update control output
@@ -288,6 +289,10 @@ void Temp_Feedback_Control(void const *args)
 
         voutAC = get_value64(HeaterAC);
         voutBD = get_value64(HeaterBD);
+
+        printf("Writing to DAC:\n");
+        printf("\t Vout(heat AC): %f TempAC: %f\n", voutAC, get_value64(TempAC));
+        printf("\t Vout(heat BD): %f TempBD: %f\n\n", voutBD, get_value64(TempBD));
 
         DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
         DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
