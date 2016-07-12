@@ -321,7 +321,7 @@ void Clk_att(void const *arg)
     clk = !clk;
 }
 
-void Switching_Attenuators_Control(void const *arg)
+void Attenuators_Control(void const *arg)
 {
     double prev_att1 = get_value64(Att)+1;
     bool attVec1[6];
