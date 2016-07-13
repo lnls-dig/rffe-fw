@@ -597,8 +597,7 @@ int main()
             printf(" Waiting for new client connection...\n");
 
             server.accept(client);
-            client.set_blocking(false, 1500); // Timeout after (1.5)s
-            //client.set_blocking(true); // Timeout after (1.5)s
+            client.set_blocking(true); // Do not timeout
 
             printf("Connection from client: %s\n", client.get_address());
 
