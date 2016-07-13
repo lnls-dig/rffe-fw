@@ -72,6 +72,34 @@ uint8_t PID_BD_Kc[8];
 uint8_t PID_BD_tauI[8];
 uint8_t PID_BD_tauD[8];
 
+struct bsmp_reg_var {
+    uint8_t *data;
+    bool writable;
+    uint8_t size;
+};
+
+/* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
+struct bsmp_reg_var rffe_vars[VarCount] = {
+    [0]  = { .data = Att,           .writable = true,  .size = 8 }, // Attenuators
+    [1]  = { .data = TempAC,        .writable = false, .size = 8 }, // TempAC
+    [2]  = { .data = TempBD,        .writable = false, .size = 8 }, // TempBD
+    [3]  = { .data = Set_PointAC,   .writable = true,  .size = 8 }, // Set_PointAC
+    [4]  = { .data = Set_PointBD,   .writable = true,  .size = 8 }, // Set_PointBD
+    [5]  = { .data = Temp_Control,  .writable = true,  .size = 1 }, // Temp_Control
+    [6]  = { .data = HeaterAC,      .writable = true,  .size = 8 }, // HeaterAC
+    [7]  = { .data = HeaterBD,      .writable = true,  .size = 8 }, // HeaterBD
+    [8]  = { .data = Reset,         .writable = true,  .size = 1 }, // Reset
+    [9]  = { .data = Reprogramming, .writable = true,  .size = 1 }, // Reprogramming
+    [10] = { .data = Data,          .writable = true,  .size = DataSize }, // Data
+    [11] = { .data = Version,       .writable = false, .size = 8 }, // Version
+    [12] = { .data = PID_AC_Kc,     .writable = true,  .size = 8 }, // PID_AC_Kc
+    [13] = { .data = PID_AC_tauI,   .writable = true,  .size = 8 }, // PID_AC_tauI
+    [14] = { .data = PID_AC_tauD,   .writable = true,  .size = 8 }, // PID_AC_tauD
+    [15] = { .data = PID_BD_Kc,     .writable = true,  .size = 8 }, // PID_BD_Kc
+    [16] = { .data = PID_BD_tauI,   .writable = true,  .size = 8 }, // PID_BD_tauI
+    [17] = { .data = PID_BD_tauD,   .writable = true,  .size = 8 }, // PID_BD_tauD
+};
+
 LocalFileSystem localdir("local");               // Create the local filesystem under the name "local"
 FILE *fp;
 
@@ -381,6 +409,16 @@ void set_var(bsmp_var * dummy, int ID, bool writable, int size, uint8_t * value)
     dummy[ID].data = value;
 }
 
+void bsmp_register_list( bsmp_server_t *server, struct bsmp_reg_var *vars, uint8_t count )
+{
+    uint8_t i;
+
+    for( i = 0; i < count; i++ ) {
+	set_var( dummy, i, vars[i].writable, vars[i].size, vars[i].data );
+	bsmp_register_variable( server, &dummy[i]);
+    }
+}
+
 int check_name(char * name)
 {
     if ((name[0] == 'V') && isdigit(name[1]) && (name[2] == '_') && isdigit(name[3]) && isdigit(name[4]) && isdigit(name[5]) && isdigit(name[6]))
@@ -436,105 +474,47 @@ int main()
     printf("RFFE Control Firmware\n");
     // Setup of variables
 
-    enum bsmp_err err;
     bsmp_server_t *bsmp = bsmp_server_new();
     led_g=0;
     led_r=0;
+
     // Variables initialization
-
-    // Att
+    // Attenuators
     set_value(Att,30.0);
-    set_var(dummy, AttID, true, 8, Att);
-    err = bsmp_register_variable(bsmp,&dummy[AttID]);
-
     // TempAC
     set_value(TempAC,0.0);
-    set_var(dummy, TempACID, false, 8, TempAC);
-    err = bsmp_register_variable(bsmp,&dummy[TempACID]);
-
     // TempBD
     set_value(TempBD,0.0);
-    set_var(dummy, TempBDID, false, 8, TempBD);
-    err = bsmp_register_variable(bsmp,&dummy[TempBDID]);
-
     // Set_PointAC
     set_value(Set_PointAC,51.5);
-    set_var(dummy, Set_PointACID, true, 8, Set_PointAC);
-    err = bsmp_register_variable(bsmp,&dummy[Set_PointACID]);
-
     // Set_PointBD
     set_value(Set_PointBD,51.5);
-    set_var(dummy, Set_PointBDID, true, 8, Set_PointBD);
-    err = bsmp_register_variable(bsmp,&dummy[Set_PointBDID]);
-
     // Temp_Control
-    Temp_Control[0] = 1;
-    set_var(dummy, Temp_ControlID, true, 1, Temp_Control);
-    err = bsmp_register_variable(bsmp,&dummy[Temp_ControlID]);
-
+    set_value(Temp_Control, 0);
     // HeaterAC
-    set_value(HeaterAC,0.0);
-    set_var(dummy, HeaterACID, true, 8, HeaterAC);
-    err = bsmp_register_variable(bsmp,&dummy[HeaterACID]);
-
+    set_value(HeaterAC, 0.0);
     // HeaterBD
-    set_value(HeaterBD,0.0);
-    set_var(dummy, HeaterBDID, true, 8, HeaterBD);
-    err = bsmp_register_variable(bsmp,&dummy[HeaterBDID]);
-
+    set_value(HeaterBD, 0.0);
     // Reset
-    Reset[0] = 0;
-    set_var(dummy, ResetID, true, 1, Reset);
-    err = bsmp_register_variable(bsmp,&dummy[ResetID]);
-
+    set_value(Reset, 0);
     // Reprogramming
-    Reprogramming[0] = 0;
-    set_var(dummy, ReprogrammingID, true, 1, Reprogramming);
-    err = bsmp_register_variable(bsmp,&dummy[ReprogrammingID]);
-
-    // Data
-    //set_value(Data,"       ");
-    set_var(dummy, DataID, true, DataSize, Data);
-    err = bsmp_register_variable(bsmp,&dummy[DataID]);
-
+    set_value(Reprogramming, 0);
     // Version
     set_value(Version,"V2_0005");
-    set_var(dummy, VersionID, false, 8, Version);
-    err = bsmp_register_variable(bsmp,&dummy[VersionID]);
-
     //PID_AC Kc parameter
     set_value(PID_AC_Kc, 1.0);
-    set_var(dummy, PID_AC_KcID, true, 8, PID_AC_Kc);
-    err = bsmp_register_variable(bsmp,&dummy[PID_AC_KcID]);
-
     //PID_AC tauI parameter
     set_value(PID_AC_tauI, 1.0);
-    set_var(dummy, PID_AC_tauIID, true, 8, PID_AC_tauI);
-    err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauIID]);
-
     //PID_AC tauI parameter
     set_value(PID_AC_tauD, 1.0);
-    set_var(dummy, PID_AC_tauDID, true, 8, PID_AC_tauD);
-    err = bsmp_register_variable(bsmp,&dummy[PID_AC_tauDID]);
-
     //PID_BD Kc parameter
     set_value(PID_BD_Kc, 1.0);
-    set_var(dummy, PID_BD_KcID, true, 8, PID_BD_Kc);
-    err = bsmp_register_variable(bsmp,&dummy[PID_BD_KcID]);
-
     //PID_BD tauI parameter
     set_value(PID_BD_tauI, 1.0);
-    set_var(dummy, PID_BD_tauIID, true, 8, PID_BD_tauI);
-    err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauIID]);
-
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 1.0);
-    set_var(dummy, PID_BD_tauDID, true, 8, PID_BD_tauD);
-    err = bsmp_register_variable(bsmp,&dummy[PID_BD_tauDID]);
 
-    if (err){
-        //Handle Error
-    }
+    bsmp_register_list( bsmp, rffe_vars, VarCount );
 
     int s,numVer;
     uint8_t state = 0;
