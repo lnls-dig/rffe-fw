@@ -225,10 +225,6 @@ void Temp_Feedback_Control(void const *args)
         // Read temp from ADT720 in RFFE_BD
         set_value(TempBD,ADT7320_read(CSbd));
 
-        // Update PID tuning values
-        pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
-        pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
-
         if (state != Temp_Control[0]) {
             printf ("New temp_control state : %d\n", Temp_Control[0]);
             state = Temp_Control[0];
@@ -252,6 +248,10 @@ void Temp_Feedback_Control(void const *args)
 #ifdef DEBUG_PRINTF
             printf( "\tPID Control enabled\n" );
 #endif
+	    // Update PID tuning values
+	    pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
+	    pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
+
             // Calculating the Process Values
             ProcessValueAC = (float)( get_value64(TempAC) );
             ProcessValueBD = (float)( get_value64(TempBD) );
