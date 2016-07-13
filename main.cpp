@@ -247,6 +247,10 @@ void Temp_Feedback_Control(void const *args)
         if (Temp_Control[0] != 0) {
 #ifdef DEBUG_PRINTF
             printf( "\tPID Control enabled\n" );
+	    printf( "PID_AC Params:\n");
+	    printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD));
+	    printf( "PID_BD Params:\n");
+	    printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD));
 #endif
 	    // Update PID tuning values
 	    pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
@@ -295,6 +299,9 @@ void Temp_Feedback_Control(void const *args)
         DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
         DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
 
+#ifdef DEBUG_PRINTF
+	printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
+#endif
         Thread::wait(int(1000*Rate));
     }
 }
