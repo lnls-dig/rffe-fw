@@ -440,40 +440,40 @@ int main()
     set_var(dummy, AttID, true, 8, Att);
     err = bsmp_register_variable(bsmp,&dummy[AttID]);
 
-    // TempBD
-    set_value(TempBD,0.0);
-    set_var(dummy, TempBDID, false, 8, TempBD);
-    err = bsmp_register_variable(bsmp,&dummy[TempBDID]);
-
     // TempAC
     set_value(TempAC,0.0);
     set_var(dummy, TempACID, false, 8, TempAC);
     err = bsmp_register_variable(bsmp,&dummy[TempACID]);
 
-    // Set_PointBD
-    set_value(Set_PointBD,51.5);
-    set_var(dummy, Set_PointBDID, true, 8, Set_PointBD);
-    err = bsmp_register_variable(bsmp,&dummy[Set_PointBDID]);
+    // TempBD
+    set_value(TempBD,0.0);
+    set_var(dummy, TempBDID, false, 8, TempBD);
+    err = bsmp_register_variable(bsmp,&dummy[TempBDID]);
 
     // Set_PointAC
     set_value(Set_PointAC,51.5);
     set_var(dummy, Set_PointACID, true, 8, Set_PointAC);
     err = bsmp_register_variable(bsmp,&dummy[Set_PointACID]);
 
+    // Set_PointBD
+    set_value(Set_PointBD,51.5);
+    set_var(dummy, Set_PointBDID, true, 8, Set_PointBD);
+    err = bsmp_register_variable(bsmp,&dummy[Set_PointBDID]);
+
     // Temp_Control
     Temp_Control[0] = 1;
     set_var(dummy, Temp_ControlID, true, 1, Temp_Control);
     err = bsmp_register_variable(bsmp,&dummy[Temp_ControlID]);
 
-    // HeaterBD
-    set_value(HeaterBD,0.0);
-    set_var(dummy, HeaterBDID, true, 8, HeaterBD);
-    err = bsmp_register_variable(bsmp,&dummy[HeaterBDID]);
-
     // HeaterAC
     set_value(HeaterAC,0.0);
     set_var(dummy, HeaterACID, true, 8, HeaterAC);
     err = bsmp_register_variable(bsmp,&dummy[HeaterACID]);
+
+    // HeaterBD
+    set_value(HeaterBD,0.0);
+    set_var(dummy, HeaterBDID, true, 8, HeaterBD);
+    err = bsmp_register_variable(bsmp,&dummy[HeaterBDID]);
 
     // Reset
     Reset[0] = 0;
