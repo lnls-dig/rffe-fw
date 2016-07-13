@@ -201,12 +201,15 @@ void set_value(uint8_t *var, int value){
     memcpy(var,&aux,1);
 }
 
+unsigned char get_value8(uint8_t *var){
+    Charge aux;
+    memcpy(&aux,&var,1);
     return aux.charge1[0];
 }
 
-int get_value32(variable_header *var){
+int get_value32(uint8_t *var){
     Charge aux;
-    memcpy(&aux,&var->value,var->size);
+    memcpy(&aux,&var,4);
     return aux.charge2[0];
 }
 
