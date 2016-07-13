@@ -189,16 +189,18 @@ void set_value(uint8_t *var, double value){
     Charge aux;
     aux.charge3[0] = value;
     memcpy(var,&aux,8);
-    return;
 }
 
 void set_value(uint8_t *var, char const* value){
     memcpy(var,value,8);
 }
 
-unsigned char get_value8(variable_header *var){
+void set_value(uint8_t *var, int value){
     Charge aux;
-    memcpy(&aux,&var->value,var->size);
+    aux.charge2[0] = value;
+    memcpy(var,&aux,1);
+}
+
     return aux.charge1[0];
 }
 
