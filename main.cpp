@@ -43,11 +43,13 @@ extern "C" {
 #define VarCount        18
 
 // Constants
-#define Rate            1.0
-#define MaxPIDout       3.3
-#define MinPIDout       0.0
-#define Refin           3.3
-#define DataSize        127
+#define PID_RATE        1.0
+#define PID_OUTMAX      3.3
+#define PID_OUTMIN      0.0
+
+#define DAC_REFIN       3.3
+
+#define FILE_DATASIZE   127
 
 extern "C" void mbed_reset();
 
@@ -63,7 +65,7 @@ uint8_t HeaterAC[8];
 uint8_t HeaterBD[8];
 uint8_t Reset[1];
 uint8_t Reprogramming[1];
-uint8_t Data[DataSize];
+uint8_t Data[FILE_DATASIZE];
 uint8_t Version[8];
 uint8_t PID_AC_Kc[8];
 uint8_t PID_AC_tauI[8];
@@ -90,7 +92,7 @@ struct bsmp_reg_var rffe_vars[VarCount] = {
     [7]  = { .data = HeaterBD,      .writable = true,  .size = 8 }, // HeaterBD
     [8]  = { .data = Reset,         .writable = true,  .size = 1 }, // Reset
     [9]  = { .data = Reprogramming, .writable = true,  .size = 1 }, // Reprogramming
-    [10] = { .data = Data,          .writable = true,  .size = DataSize }, // Data
+    [10] = { .data = Data,          .writable = true,  .size = FILE_DATASIZE }, // Data
     [11] = { .data = Version,       .writable = false, .size = 8 }, // Version
     [12] = { .data = PID_AC_Kc,     .writable = true,  .size = 8 }, // PID_AC_Kc
     [13] = { .data = PID_AC_tauI,   .writable = true,  .size = 8 }, // PID_AC_tauI
@@ -137,7 +139,7 @@ bool get_eth_link_status(void)
     return (lpc_mii_read_data() & DP8_VALID_LINK) ? true : false;
 }
 
-//********************************************** Drivers functions **********************************************************
+/********************************************** Drivers functions ***********************************************************/
 void ADT7320_config(mbed::DigitalOut cs)
 {
     spi1.frequency(1000000);
@@ -200,8 +202,8 @@ void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
     // 1 0 0 1 (0x9000)     12 bits      B      Input register and DAC register updated, output updated
     // 1 0 1 0 (0xA000)     12 bits      C      Input register and DAC register updated, output updated
     // 1 0 1 1 (0xB000)     12 bits      D      Input register and DAC register updated, output updated
-    // vout = Refin * data  / 4095
-    // data = vout * 4095 / Refin
+    // vout = DAC_REFIN * data  / 4095
+    // data = vout * 4095 / DAC_REFIN
 
     uint16_t data;
     uint16_t cfg;
@@ -212,7 +214,7 @@ void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
     cs = 1;
 
     // Calculating data to vout
-    data = (uint16_t)(vout*4095/Refin);
+    data = (uint16_t)(vout*4095/DAC_REFIN);
     cfg = ( dac_sel << 12 ) | ( data & 0x0FFF );
 
     // Transmition
@@ -238,13 +240,13 @@ void Temp_Feedback_Control(void const *args)
     int state = 2;
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
-    PID pidAC( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD), Rate );
+    PID pidAC( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD), PID_RATE );
     pidAC.setInputLimits( 0.0 , 100.0 );
-    pidAC.setOutputLimits( MinPIDout , MaxPIDout );
+    pidAC.setOutputLimits( PID_OUTMIN , PID_OUTMAX );
 
-    PID pidBD( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD), Rate );
+    PID pidBD( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD), PID_RATE );
     pidBD.setInputLimits( 0.0 , 100.0 );
-    pidBD.setOutputLimits( MinPIDout, MaxPIDout );
+    pidBD.setOutputLimits( PID_OUTMIN, PID_OUTMAX );
 
     while (1) {
         // Read temp from ADT7320 in RFFE_AC
@@ -266,7 +268,7 @@ void Temp_Feedback_Control(void const *args)
         if ((get_value8(Temp_Control) == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
             SHDN_temp = 0;
             led4 = 1;
-            Thread::wait(int(1000*Rate));
+            Thread::wait(int(1000*PID_RATE));
             continue;
         } else {
             SHDN_temp = 1;
@@ -275,14 +277,14 @@ void Temp_Feedback_Control(void const *args)
         if (get_value8(Temp_Control) != 0) {
 #ifdef DEBUG_PRINTF
             printf( "\tPID Control enabled\n" );
-	    printf( "PID_AC Params:\n");
-	    printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD));
-	    printf( "PID_BD Params:\n");
-	    printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD));
+            printf( "PID_AC Params:\n");
+            printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD));
+            printf( "PID_BD Params:\n");
+            printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD));
 #endif
-	    // Update PID tuning values
-	    pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
-	    pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
+            // Update PID tuning values
+            pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
+            pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
 
             // Calculating the Process Values
             ProcessValueAC = (float)( get_value64(TempAC) );
@@ -312,14 +314,14 @@ void Temp_Feedback_Control(void const *args)
         }
 
         // Update control output
-        if (get_value64(HeaterAC) > MaxPIDout)
-            set_value(HeaterAC, MaxPIDout);
-        if (get_value64(HeaterBD) > MaxPIDout)
-            set_value(HeaterBD, MaxPIDout);
-        if (get_value64(HeaterAC) < MinPIDout)
-            set_value(HeaterAC, MinPIDout);
-        if (get_value64(HeaterBD) < MinPIDout)
-            set_value(HeaterBD, MinPIDout);
+        if (get_value64(HeaterAC) > PID_OUTMAX)
+            set_value(HeaterAC, PID_OUTMAX);
+        if (get_value64(HeaterBD) > PID_OUTMAX)
+            set_value(HeaterBD, PID_OUTMAX);
+        if (get_value64(HeaterAC) < PID_OUTMIN)
+            set_value(HeaterAC, PID_OUTMIN);
+        if (get_value64(HeaterBD) < PID_OUTMIN)
+            set_value(HeaterBD, PID_OUTMIN);
 
         voutAC = get_value64(HeaterAC);
         voutBD = get_value64(HeaterBD);
@@ -328,9 +330,9 @@ void Temp_Feedback_Control(void const *args)
         DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
 
 #ifdef DEBUG_PRINTF
-	printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
+        printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
 #endif
-        Thread::wait(int(1000*Rate));
+        Thread::wait(int(1000*PID_RATE));
     }
 }
 
@@ -414,8 +416,8 @@ void bsmp_register_list( bsmp_server_t *server, struct bsmp_reg_var *vars, uint8
     uint8_t i;
 
     for( i = 0; i < count; i++ ) {
-	set_var( dummy, i, vars[i].writable, vars[i].size, vars[i].data );
-	bsmp_register_variable( server, &dummy[i]);
+        set_var( dummy, i, vars[i].writable, vars[i].size, vars[i].data );
+        bsmp_register_variable( server, &dummy[i]);
     }
 }
 
@@ -460,8 +462,8 @@ void Update_Software(char * old_name, char * name)
 
 void Data_Check()
 {
-    for (int i = 0; i < DataSize; i++) {
-        if ((i < (DataSize-4)) && Data[i] == 13 && Data[i+1] == 13 && Data[i+2] == 13 && Data[i+3] == 13)
+    for (int i = 0; i < FILE_DATASIZE; i++) {
+        if ((i < (FILE_DATASIZE-4)) && Data[i] == 13 && Data[i+1] == 13 && Data[i+2] == 13 && Data[i+3] == 13)
             break;
         fputc(Data[i], fp);
     }
