@@ -15,32 +15,12 @@ extern "C" {
 #include <bsmp/server.h>
 }
 
-#define DP8_SPEED10MBPS    (1 << 1)   /**< 1=10MBps speed */
-#define DP8_VALID_LINK     (1 << 0)   /**< 1=Link active */
 
-#define BUFSIZE 140
-#define SERVER_PORT 6791
+#define DP8_SPEED10MBPS (1 << 1)    /**< 1=10MBps speed */
+#define DP8_VALID_LINK  (1 << 0)    /**< 1=Link active */
 
-//Variables ID's
-#define AttID           0
-#define TempACID        1
-#define TempBDID        2
-#define Set_PointACID   3
-#define Set_PointBDID   4
-#define Temp_ControlID  5
-#define HeaterACID      6
-#define HeaterBDID      7
-#define ResetID         8
-#define ReprogrammingID 9
-#define DataID          10
-#define VersionID       11
-#define PID_AC_KcID     12
-#define PID_AC_tauIID   13
-#define PID_AC_tauDID   14
-#define PID_BD_KcID     15
-#define PID_BD_tauIID   16
-#define PID_BD_tauDID   17
-#define VarCount        18
+#define BUFSIZE         140
+#define SERVER_PORT     6791
 
 // Constants
 #define PID_RATE        1.0
@@ -53,8 +33,13 @@ extern "C" {
 
 extern "C" void mbed_reset();
 
-// Struct of the variables
-struct bsmp_var dummy[VarCount];
+struct bsmp_reg_var {
+    uint8_t *data;
+    bool writable;
+    uint8_t size;
+};
+
+// BSMP Variables arrays
 uint8_t Att[8];
 uint8_t TempAC[8];
 uint8_t TempBD[8];
@@ -74,14 +59,8 @@ uint8_t PID_BD_Kc[8];
 uint8_t PID_BD_tauI[8];
 uint8_t PID_BD_tauD[8];
 
-struct bsmp_reg_var {
-    uint8_t *data;
-    bool writable;
-    uint8_t size;
-};
-
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
-struct bsmp_reg_var rffe_vars[VarCount] = {
+struct bsmp_reg_var rffe_vars[] = {
     [0]  = { .data = Att,           .writable = true,  .size = 8 }, // Attenuators
     [1]  = { .data = TempAC,        .writable = false, .size = 8 }, // TempAC
     [2]  = { .data = TempBD,        .writable = false, .size = 8 }, // TempBD
@@ -102,7 +81,11 @@ struct bsmp_reg_var rffe_vars[VarCount] = {
     [17] = { .data = PID_BD_tauD,   .writable = true,  .size = 8 }, // PID_BD_tauD
 };
 
-LocalFileSystem localdir("local");               // Create the local filesystem under the name "local"
+// Dummy structure to allow read/write for BSMP protocol
+struct bsmp_var dummy[sizeof(rffe_vars)/sizeof(rffe_vars[0])];
+
+// Create the local filesystem under the name "local"
+LocalFileSystem localdir("local");
 FILE *fp;
 
 // Inicializations - MBED
@@ -129,10 +112,8 @@ DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = lo
 DigitalOut CS_dac(p16); // Chip select for DAC. LVTTL, low = Selected, init = high.Chip select
 DigitalOut LedY(p29); // Yellow led of the Ethernet connector. LVTTLIndicate active connection
 DigitalOut LedG(p30); // Green led of the Ethernet connector. LVTTLIndicate transmiting data
-Serial pc(USBTX, USBRX);
-
-// spi(mosi, miso, sclk)
-SPI spi1(p5,p6,p7);
+Serial pc(USBTX, USBRX); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
+SPI spi1(p5,p6,p7); //SPI Interface - spi(mosi, miso, sclk)
 
 bool get_eth_link_status(void)
 {
@@ -516,7 +497,7 @@ int main()
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 1.0);
 
-    bsmp_register_list( bsmp, rffe_vars, VarCount );
+    bsmp_register_list( bsmp, rffe_vars, sizeof(rffe_vars)/sizeof(rffe_vars[0]) );
 
     int s,numVer;
     uint8_t state = 0;
