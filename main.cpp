@@ -236,17 +236,17 @@ void Temp_Feedback_Control(void const *args)
         // Read temp from ADT720 in RFFE_BD
         set_value(TempBD,ADT7320_read(CSbd));
 
-        if (state != get_value8(Temp_Control)) {
-            printf ("New temp_control state : %d\n", get_value8(Temp_Control));
-            state = get_value8(Temp_Control);
-            if (get_value8(Temp_Control) == 0) {
+        if (state != Temp_Control[0]) {
+            printf ("New temp_control state : %d\n", Temp_Control[0]);
+            state = Temp_Control[0];
+            if (Temp_Control[0] == 0) {
                 printf("Automatic temperature control disabled!\n");
                 set_value(HeaterAC,0.0);
                 set_value(HeaterBD,0.0);
                 continue;
             }
         }
-        if ((get_value8(Temp_Control) == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
+        if ((Temp_Control[0] == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
             SHDN_temp = 0;
             led4 = 1;
             Thread::wait(int(1000*PID_RATE));
@@ -255,7 +255,7 @@ void Temp_Feedback_Control(void const *args)
             SHDN_temp = 1;
         }
 
-        if (get_value8(Temp_Control) != 0) {
+        if (Temp_Control[0] != 0) {
 #ifdef DEBUG_PRINTF
             printf( "\tPID Control enabled\n" );
             printf( "PID_AC Params:\n");
@@ -473,15 +473,15 @@ int main()
     // Set_PointBD
     set_value(Set_PointBD,51.5);
     // Temp_Control
-    set_value(Temp_Control, 0);
+    Temp_Control[0] = 0;
     // HeaterAC
     set_value(HeaterAC, 0.0);
     // HeaterBD
     set_value(HeaterBD, 0.0);
     // Reset
-    set_value(Reset, 0);
+    Reset[0] = 0;
     // Reprogramming
-    set_value(Reprogramming, 0);
+    Reprogramming[0] = 0;
     // Version
     set_value(Version,"V2_0005");
     //PID_AC Kc parameter
@@ -629,12 +629,12 @@ int main()
                     continue;
                 }
 #if 0
-                if (state != get_value8(Reprogramming)) {
-                    switch (get_value8(Reprogramming)) {
+                if (state != Reprogramming[0]) {
+                    switch (Reprogramming[0]) {
                     case 0:
                         if (state == 1)
                             fclose(fp);
-                        state = get_value8(Reprogramming);
+                        state = Reprogramming[0];
                         break;
 
                     case 1:
@@ -653,25 +653,25 @@ int main()
                         int2str(&name[3],(str2int(&old_name[3])%9999+1));
                         printf("name: %s\n",name);
                         fp = fopen((char*)strcat(path,name), "wb");
-                        state = get_value8(Reprogramming);
+                        state = Reprogramming[0];
                         break;
 
                     case 2:
                         if (state == 1) {
                             fclose(fp);
                         }
-                        state = get_value8(Reprogramming);
+                        state = Reprogramming[0];
                         Update_Software(old_name, name);
                         break;
 
                     }
                 }
 
-                if ((get_value8(Reprogramming) == 1) && (buf[0] == 0x20) && (buf[3] == DataID)) {
+                if ((Reprogramming[0] == 1) && (buf[0] == 0x20) && (buf[3] == DataID)) {
                     Data_Check();
                 }
 #endif
-                if (get_value8(Reset) == 1) {
+                if (Reset[0] == 1) {
                     mbed_reset();
                 }
 
