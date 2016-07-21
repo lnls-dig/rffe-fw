@@ -215,97 +215,90 @@ void Temp_Feedback_Control(void const *args)
     ADT7320_config(CSac);
     ADT7320_config(CSbd);
 
-    float ProcessValueAC, ProcessValueBD;
+    double SetP_AC, SetP_BD;
+    double ProcessValueAC, ProcessValueBD;
     double voutAC, voutBD;
 
     int state = 2;
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
-    PID pidAC( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD), PID_RATE );
-    pidAC.setInputLimits( 0.0 , 100.0 );
-    pidAC.setOutputLimits( PID_OUTMIN , PID_OUTMAX );
+    PID pidAC( &ProcessValueAC, &voutAC, &SetP_AC, get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD), DIRECT );
+    pidAC.SetSampleTime( PID_RATE*1000 );
+    //pidAC.SetInputLimits( 0.0 , 100.0 );
+    pidAC.SetOutputLimits( PID_OUTMIN , PID_OUTMAX );
+    pidAC.SetMode( MANUAL ); // Start with the automatic control disabled
 
-    PID pidBD( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD), PID_RATE );
-    pidBD.setInputLimits( 0.0 , 100.0 );
-    pidBD.setOutputLimits( PID_OUTMIN, PID_OUTMAX );
+    PID pidBD( &ProcessValueBD, &voutBD, &SetP_BD, get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD), DIRECT );
+    pidBD.SetSampleTime( PID_RATE*1000 );
+    //pidBD.SetInputLimits( 0.0 , 100.0 );
+    pidBD.SetOutputLimits( PID_OUTMIN, PID_OUTMAX );
+    pidAC.SetMode( MANUAL ); // Start with the automatic control disabled
+
+    SHDN_temp = 1;
 
     while (1) {
-        // Read temp from ADT7320 in RFFE_AC
-        set_value(TempAC,ADT7320_read(CSac));
-
-        // Read temp from ADT720 in RFFE_BD
-        set_value(TempBD,ADT7320_read(CSbd));
 
         if (state != Temp_Control[0]) {
-            printf ("New temp_control state : %d\n", Temp_Control[0]);
+            printf ("New temp_control state : %s\n", Temp_Control[0] ? "AUTOMATIC":"MANUAL");
             state = Temp_Control[0];
-            if (Temp_Control[0] == 0) {
-                printf("Automatic temperature control disabled!\n");
-                set_value(HeaterAC,0.0);
-                set_value(HeaterBD,0.0);
-                continue;
+
+            pidAC.SetMode( state );
+            pidAC.SetMode( state );
+        }
+
+        // Read temp from ADT7320 in RFFEs
+        set_value(TempAC,ADT7320_read(CSac));
+        set_value(TempBD,ADT7320_read(CSbd));
+
+        // Update the Process Values
+        ProcessValueAC = get_value64(TempAC);
+        ProcessValueBD = get_value64(TempBD);
+
+        /* Update Set Points */
+        SetP_AC = get_value64(Set_PointAC);
+        SetP_BD = get_value64(Set_PointBD);
+
+#ifdef DEBUG_PRINTF
+        printf( "PID_AC Params:\n");
+        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD));
+        printf( "PID_BD Params:\n");
+        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD));
+#endif
+
+        // Update PID tuning values
+        pidAC.SetTunings( get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD) );
+        pidBD.SetTunings( get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD) );
+
+        /* Compute the PID values (this functions returns false and does nothing if set in MANUAL mode) */
+        if ( ( pidAC.Compute() == false ) ) {
+            // Use the heater values provided by the user
+            voutAC = get_value64(HeaterAC);
+
+            // Check if the user set values within the DAC range
+            if (get_value64(HeaterAC) > PID_OUTMAX) {
+                voutAC = PID_OUTMAX;
+            }
+            if (get_value64(HeaterAC) < PID_OUTMIN) {
+                voutAC = PID_OUTMIN;
             }
         }
-        if ((Temp_Control[0] == 0) && (get_value64(HeaterBD) == 0.0) && (get_value64(HeaterAC) == 0.0)) {
-            SHDN_temp = 0;
-            led4 = 1;
-            Thread::wait(int(1000*PID_RATE));
-            continue;
-        } else {
-            SHDN_temp = 1;
-        }
 
-        if (Temp_Control[0] != 0) {
-#ifdef DEBUG_PRINTF
-            printf( "\tPID Control enabled\n" );
-            printf( "PID_AC Params:\n");
-            printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD));
-            printf( "PID_BD Params:\n");
-            printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD));
-#endif
-            // Update PID tuning values
-            pidAC.setTunings( (float)get_value64(PID_AC_Kc), (float)get_value64(PID_AC_tauI), (float)get_value64(PID_AC_tauD) );
-            pidBD.setTunings( (float)get_value64(PID_BD_Kc), (float)get_value64(PID_BD_tauI), (float)get_value64(PID_BD_tauD) );
-
-            // Calculating the Process Values
-            ProcessValueAC = (float)( get_value64(TempAC) );
-            ProcessValueBD = (float)( get_value64(TempBD) );
-
-            // Vout A - Output to heater BD
-            // Temperature measurements from Temp3 and Temp4
-
-            pidAC.setSetPoint((float)get_value64(Set_PointAC));
-            pidAC.setProcessValue(ProcessValueAC);
-            // Control output
-            set_value(HeaterAC,pidAC.compute());
-
-            // Vout B - Output to heater AC
-            // Temperature measurements from TempBD and TempAC
-
-            pidBD.setSetPoint((float)get_value64(Set_PointBD));
-            pidBD.setProcessValue(ProcessValueBD);
-            // Control output
-            set_value(HeaterBD,pidBD.compute());
-            voutAC = get_value64(HeaterAC);
+        if ( ( pidBD.Compute() == false ) ) {
+            // Use the heater values provided by the user
             voutBD = get_value64(HeaterBD);
-        } else {
-#ifdef DEBUG_PRINTF
-            printf("\tManual temperature control enabled!\n");
-#endif
+
+            // Check if the user set values within the DAC range
+            if (get_value64(HeaterBD) > PID_OUTMAX) {
+                voutBD = PID_OUTMAX;
+            }
+            if (get_value64(HeaterBD) < PID_OUTMIN) {
+                voutBD = PID_OUTMIN;
+            }
         }
 
-        // Update control output
-        if (get_value64(HeaterAC) > PID_OUTMAX)
-            set_value(HeaterAC, PID_OUTMAX);
-        if (get_value64(HeaterBD) > PID_OUTMAX)
-            set_value(HeaterBD, PID_OUTMAX);
-        if (get_value64(HeaterAC) < PID_OUTMIN)
-            set_value(HeaterAC, PID_OUTMIN);
-        if (get_value64(HeaterBD) < PID_OUTMIN)
-            set_value(HeaterBD, PID_OUTMIN);
-
-        voutAC = get_value64(HeaterAC);
-        voutBD = get_value64(HeaterBD);
+        // Update values in BSMP registers list
+        set_value(HeaterAC, voutAC);
+        set_value(HeaterBD, voutBD);
 
         DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
         DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
@@ -485,17 +478,17 @@ int main()
     // Version
     set_value(Version,"V2_0005");
     //PID_AC Kc parameter
-    set_value(PID_AC_Kc, 1.0);
+    set_value(PID_AC_Kc, 0);
     //PID_AC tauI parameter
-    set_value(PID_AC_tauI, 1.0);
+    set_value(PID_AC_tauI, 0);
     //PID_AC tauI parameter
-    set_value(PID_AC_tauD, 1.0);
+    set_value(PID_AC_tauD, 0);
     //PID_BD Kc parameter
-    set_value(PID_BD_Kc, 1.0);
+    set_value(PID_BD_Kc, 0);
     //PID_BD tauI parameter
-    set_value(PID_BD_tauI, 1.0);
+    set_value(PID_BD_tauI, 0);
     //PID_BD tauI parameter
-    set_value(PID_BD_tauD, 1.0);
+    set_value(PID_BD_tauD, 0);
 
     bsmp_register_list( bsmp, rffe_vars, sizeof(rffe_vars)/sizeof(rffe_vars[0]) );
 
