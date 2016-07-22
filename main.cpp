@@ -220,19 +220,20 @@ void Temp_Feedback_Control(void const *args)
     double voutAC, voutBD;
 
     int state = 2;
+    int pid_state = MANUAL;
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
     PID pidAC( &ProcessValueAC, &voutAC, &SetP_AC, get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD), DIRECT );
     pidAC.SetSampleTime( PID_RATE*1000 );
     //pidAC.SetInputLimits( 0.0 , 100.0 );
     pidAC.SetOutputLimits( PID_OUTMIN , PID_OUTMAX );
-    pidAC.SetMode( MANUAL ); // Start with the automatic control disabled
+    pidAC.SetMode( pid_state ); // Start with the automatic control disabled
 
     PID pidBD( &ProcessValueBD, &voutBD, &SetP_BD, get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD), DIRECT );
     pidBD.SetSampleTime( PID_RATE*1000 );
     //pidBD.SetInputLimits( 0.0 , 100.0 );
     pidBD.SetOutputLimits( PID_OUTMIN, PID_OUTMAX );
-    pidAC.SetMode( MANUAL ); // Start with the automatic control disabled
+    pidAC.SetMode( pid_state ); // Start with the automatic control disabled
 
     SHDN_temp = 1;
 
@@ -242,9 +243,11 @@ void Temp_Feedback_Control(void const *args)
             printf ("New temp_control state : %s\n", Temp_Control[0] ? "AUTOMATIC":"MANUAL");
             state = Temp_Control[0];
 
-            pidAC.SetMode( state );
-            pidAC.SetMode( state );
+	    pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
         }
+
+	pidAC.SetMode( pid_state );
+	pidBD.SetMode( pid_state );
 
         // Read temp from ADT7320 in RFFEs
         set_value(TempAC,ADT7320_read(CSac));
