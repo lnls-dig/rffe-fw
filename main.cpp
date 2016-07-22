@@ -102,11 +102,11 @@ DigitalOut dataC(p10); // Data line to attenuator. LVTTL, low = reset, init = lo
 DigitalOut dataA(p11); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut clk(p12); // Digital control attenuation. LVTTL, low = reset, init = low.Digital control attenuation
 DigitalOut LE(p13); // Chip select for RFFE attenuators (all channels). LVTTL, low = reset, init = low.Digital control calibration
-DigitalOut CSac(p14); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_AC
+DigitalOut CSac(p25); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_AC
 DigitalOut SHDN_temp(p15); // Shut down the temperature current boost output amplifier. LVTTL, low = disable, init = low.
 DigitalOut led_g(p19); // Green LED
 DigitalOut led_r(p20); // Red LED
-DigitalOut CSbd(p25); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_BD
+DigitalOut CSbd(p14); // Chip select for ADT7320UCPZ-R2. LVTTL, high = disable, init = high.Temp. measurement in RFFE_BD
 DigitalOut dataB(p26); // Data line to attenuator. LVTTL, low = reset, init = low. Set RF attenuators (Att)
 DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = low. Set RF attenuators (Att)
 DigitalOut CS_dac(p16); // Chip select for DAC. LVTTL, low = Selected, init = high.Chip select
@@ -173,8 +173,8 @@ double ADT7320_read(mbed::DigitalOut cs)
     return temp;
 }
 
-#define DAC_AC_SEL 0xA
-#define DAC_BD_SEL 0xB
+#define DAC_AC_SEL 0xB
+#define DAC_BD_SEL 0xA
 
 void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
 {
