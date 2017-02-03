@@ -527,6 +527,8 @@ int main()
 #else
 #if defined(ETH_FIXIP)
     eth.init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use  these parameters for static IP
+#else
+#error "No Ethernet addressing mode selected! Please choose between DHCP or Fixed IP!"
 #endif
 #endif
 
