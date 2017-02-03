@@ -408,7 +408,7 @@ void Update_Software(char * old_name, char * name)
 
 }
 
-void Data_Check()
+void Data_Check( void )
 {
     for (int i = 0; i < FILE_DATASIZE; i++) {
         if ((i < (FILE_DATASIZE-4)) && Data[i] == 13 && Data[i+1] == 13 && Data[i+2] == 13 && Data[i+3] == 13)
@@ -417,12 +417,11 @@ void Data_Check()
     }
 }
 
-int main()
+int main( void )
 {
     //Init serial port for info printf
     pc.baud(115200);
     printf("RFFE Control Firmware\n");
-    // Setup of variables
 
     bsmp_server_t *bsmp = bsmp_server_new();
     led_g=0;
@@ -543,10 +542,13 @@ int main()
 
         printf("RFFE IP: %s\n", eth.getIPAddress());
         printf("RFFE MAC Address: %s\n", eth.getMACAddress());
-        printf("Listenning on port %d...\n", SERVER_PORT);
+        printf("Listening on port %d...\n", SERVER_PORT);
 
         server.bind(SERVER_PORT);
         server.listen();
+
+        /* Turn the conection indicator LED on */
+        LedY = 1;
 
         while (true) {
             printf(" Waiting for new client connection...\n");
@@ -557,8 +559,6 @@ int main()
             printf("Connection from client: %s\n", client.get_address());
 
             while (client.is_connected() && get_eth_link_status()) {
-                /* Turn the conection indicator LED on */
-                LedY = 1;
 
                 /* Wait to receive data from client */
                 recv_sz = client.receive((char*)buf, BUFSIZE);
@@ -584,7 +584,7 @@ int main()
 
                 response.data = bufresponse;
 
-                bsmp_process_packet (bsmp,&request,&response);
+                bsmp_process_packet(bsmp, &request, &response);
 
                 sent_sz = client.send((char*)response.data, response.len);
 #ifdef DEBUG_PRINTF
