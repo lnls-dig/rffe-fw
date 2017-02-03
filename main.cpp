@@ -338,12 +338,6 @@ void Attenuators_Control(void const *arg)
 
     while (1) {
 
-        // Ethernet link test
-        if (get_eth_link_status())
-            LedY = 1;
-        else
-            LedY = 0;
-
         // Attenuators set
         if ( prev_att1 != get_value64(Att) ) {
             // Checking and setting attenuators value to fisable values
