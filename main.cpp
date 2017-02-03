@@ -33,12 +33,6 @@ extern "C" {
 
 extern "C" void mbed_reset();
 
-struct bsmp_reg_var {
-    uint8_t *data;
-    bool writable;
-    uint8_t size;
-};
-
 // BSMP Variables arrays
 uint8_t Att[8];
 uint8_t TempAC[8];
@@ -59,30 +53,31 @@ uint8_t PID_BD_Kc[8];
 uint8_t PID_BD_tauI[8];
 uint8_t PID_BD_tauD[8];
 
-/* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
-struct bsmp_reg_var rffe_vars[] = {
-    [0]  = { .data = Att,           .writable = true,  .size = 8 }, // Attenuators
-    [1]  = { .data = TempAC,        .writable = false, .size = 8 }, // TempAC
-    [2]  = { .data = TempBD,        .writable = false, .size = 8 }, // TempBD
-    [3]  = { .data = Set_PointAC,   .writable = true,  .size = 8 }, // Set_PointAC
-    [4]  = { .data = Set_PointBD,   .writable = true,  .size = 8 }, // Set_PointBD
-    [5]  = { .data = Temp_Control,  .writable = true,  .size = 1 }, // Temp_Control
-    [6]  = { .data = HeaterAC,      .writable = true,  .size = 8 }, // HeaterAC
-    [7]  = { .data = HeaterBD,      .writable = true,  .size = 8 }, // HeaterBD
-    [8]  = { .data = Reset,         .writable = true,  .size = 1 }, // Reset
-    [9]  = { .data = Reprogramming, .writable = true,  .size = 1 }, // Reprogramming
-    [10] = { .data = Data,          .writable = true,  .size = FILE_DATASIZE }, // Data
-    [11] = { .data = Version,       .writable = false, .size = 8 }, // Version
-    [12] = { .data = PID_AC_Kc,     .writable = true,  .size = 8 }, // PID_AC_Kc
-    [13] = { .data = PID_AC_tauI,   .writable = true,  .size = 8 }, // PID_AC_tauI
-    [14] = { .data = PID_AC_tauD,   .writable = true,  .size = 8 }, // PID_AC_tauD
-    [15] = { .data = PID_BD_Kc,     .writable = true,  .size = 8 }, // PID_BD_Kc
-    [16] = { .data = PID_BD_tauI,   .writable = true,  .size = 8 }, // PID_BD_tauI
-    [17] = { .data = PID_BD_tauD,   .writable = true,  .size = 8 }, // PID_BD_tauD
-};
+#define READ_ONLY  0
+#define READ_WRITE 1
 
-// Dummy structure to allow read/write for BSMP protocol
-struct bsmp_var dummy[sizeof(rffe_vars)/sizeof(rffe_vars[0])];
+#define RFFE_VAR( data, rw, size ) { { 0, rw, size }, NULL, data, NULL }
+/* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
+struct bsmp_var rffe_vars[] = {
+    [0]  = RFFE_VAR( Att,            READ_WRITE,  8 ), // Attenuators
+    [1]  = RFFE_VAR( TempAC,         READ_ONLY,   8 ), // TempAC
+    [2]  = RFFE_VAR( TempBD,         READ_ONLY,   8 ), // TempBD
+    [3]  = RFFE_VAR( Set_PointAC,    READ_WRITE,  8 ), // Set_PointAC
+    [4]  = RFFE_VAR( Set_PointBD,    READ_WRITE,  8 ), // Set_PointBD
+    [5]  = RFFE_VAR( Temp_Control,   READ_WRITE,  1 ), // Temp_Control
+    [6]  = RFFE_VAR( HeaterAC,       READ_WRITE,  8 ), // HeaterAC
+    [7]  = RFFE_VAR( HeaterBD,       READ_WRITE,  8 ), // HeaterBD
+    [8]  = RFFE_VAR( Reset,          READ_WRITE,  1 ), // Reset
+    [9]  = RFFE_VAR( Reprogramming,  READ_WRITE,  1 ), // Reprogramming
+    [10] = RFFE_VAR( Data,           READ_WRITE,  FILE_DATASIZE ), // Data
+    [11] = RFFE_VAR( Version,        READ_ONLY,   8 ), // Version
+    [12] = RFFE_VAR( PID_AC_Kc,      READ_WRITE,  8 ), // PID_AC_Kc
+    [13] = RFFE_VAR( PID_AC_tauI,    READ_WRITE,  8 ), // PID_AC_tauI
+    [14] = RFFE_VAR( PID_AC_tauD,    READ_WRITE,  8 ), // PID_AC_tauD
+    [15] = RFFE_VAR( PID_BD_Kc,      READ_WRITE,  8 ), // PID_BD_Kc
+    [16] = RFFE_VAR( PID_BD_tauI,    READ_WRITE,  8 ), // PID_BD_tauI
+    [17] = RFFE_VAR( PID_BD_tauD,    READ_WRITE,  8 ), // PID_BD_tauD
+};
 
 // Create the local filesystem under the name "local"
 LocalFileSystem localdir("local");
@@ -380,24 +375,6 @@ void Attenuators_Control(void const *arg)
     }
 }
 
-void set_var(bsmp_var * dummy, int ID, bool writable, int size, uint8_t * value)
-{
-    dummy[ID].info.id = ID;
-    dummy[ID].info.writable = writable;
-    dummy[ID].info.size = size;
-    dummy[ID].data = value;
-}
-
-void bsmp_register_list( bsmp_server_t *server, struct bsmp_reg_var *vars, uint8_t count )
-{
-    uint8_t i;
-
-    for( i = 0; i < count; i++ ) {
-        set_var( dummy, i, vars[i].writable, vars[i].size, vars[i].data );
-        bsmp_register_variable( server, &dummy[i]);
-    }
-}
-
 int check_name(char * name)
 {
     if ((name[0] == 'V') && isdigit(name[1]) && (name[2] == '_') && isdigit(name[3]) && isdigit(name[4]) && isdigit(name[5]) && isdigit(name[6]))
@@ -493,7 +470,10 @@ int main()
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 0);
 
-    bsmp_register_list( bsmp, rffe_vars, sizeof(rffe_vars)/sizeof(rffe_vars[0]) );
+    for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
+        rffe_vars[i].info.id = i;
+        bsmp_register_variable( bsmp, &rffe_vars[i] );
+    }
 
     int s,numVer;
     uint8_t state = 0;
