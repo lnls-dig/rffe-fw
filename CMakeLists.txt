@@ -8,7 +8,7 @@ include(toolchain/arm_none_eabi_toolchain.cmake)
 
 set(TOOLCHAIN "GCC_ARM" CACHE STRING "Toolchain used to build project")
 
-set(MBED_PATH mbed-lib)
+set(MBED_PATH ${CMAKE_SOURCE_DIR}/mbed-lib)
 set(MBED_MOUNT /media/MBED/ CACHE PATH "Path to MBED Storage")
 
 set(MBED_TARGET LPC1768 CACHE STRING "MBED Target CPU")
