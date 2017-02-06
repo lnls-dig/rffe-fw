@@ -3,12 +3,15 @@
 #include "rtos.h"
 #include "EthernetInterface.h"
 #include "USBHostSerial.h"
-#include "Drivers.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 #include "PID.h"
+#include "Drivers.h"
+
 #include "lpc_phy.h"
 extern "C" {
 #include "server.h"
@@ -26,8 +29,6 @@ extern "C" {
 #define PID_RATE        1.0
 #define PID_OUTMAX      3.3
 #define PID_OUTMIN      0.0
-
-#define DAC_REFIN       3.3
 
 #define FILE_DATASIZE   127
 
@@ -115,107 +116,23 @@ bool get_eth_link_status(void)
     return (lpc_mii_read_data() & DP8_VALID_LINK) ? true : false;
 }
 
-/********************************************** Drivers functions ***********************************************************/
-void ADT7320_config(mbed::DigitalOut cs)
-{
-    spi1.frequency(1000000);
-    cs = 1;
-
-    /* Reseting SPI interface - Write 32 1's to the IC */
-    spi1.format(16,3);
-    cs = 0;
-    Thread::wait(1);
-    spi1.write(0xFFFF);
-    spi1.write(0xFFFF);
-    Thread::wait(1);
-    cs = 1;
-
-    // Configuration process
-    spi1.format(8,3);
-    cs = 0;
-    Thread::wait(1);
-
-    // Select CONFIGURATION REGISTER – 0x01
-    spi1.write(0x08);
-
-    // Write data to configuration register ( 16-bits resolution + continuous conversion )
-    spi1.write(0x80);
-
-    Thread::wait(1);
-    cs = 1;
-    Thread::wait(1);
-}
-
-double ADT7320_read(mbed::DigitalOut cs)
-{
-    uint16_t data;
-    int reference = 0;
-    double delta = 128;
-    double temp;
-
-    cs = 1;
-    spi1.frequency(1000000);
-    spi1.format(16,3);
-
-    cs = 0;
-    Thread::wait(1);
-    // Select Temperature value register
-    spi1.write(0x0050);
-    data = spi1.write(0x0000);
-    cs = 1;
-    //printf("\nFrom slave: %X\n", data);
-    temp = (float(data)-reference)/delta;
-    return temp;
-}
-
-#define DAC_AC_SEL 0xB
-#define DAC_BD_SEL 0xA
-
-void DAC7554_write(mbed::DigitalOut cs, int dac_sel, double vout)
-{
-    // Control bits         Data bits   DAC     Function
-    // 1 0 0 0 (0x8000)     12 bits      A      Input register and DAC register updated, output updated
-    // 1 0 0 1 (0x9000)     12 bits      B      Input register and DAC register updated, output updated
-    // 1 0 1 0 (0xA000)     12 bits      C      Input register and DAC register updated, output updated
-    // 1 0 1 1 (0xB000)     12 bits      D      Input register and DAC register updated, output updated
-    // vout = DAC_REFIN * data  / 4095
-    // data = vout * 4095 / DAC_REFIN
-
-    uint16_t data;
-    uint16_t cfg;
-
-    // SPI config
-    spi1.frequency(1000000);
-    spi1.format(16,2);
-    cs = 1;
-
-    // Calculating data to vout
-    data = (uint16_t)(vout*4095/DAC_REFIN);
-    cfg = ( dac_sel << 12 ) | ( data & 0x0FFF );
-
-    // Transmition
-    cs = 0;
-    Thread::wait(1);
-    // control - write data to voutA
-    spi1.write( cfg );
-    Thread::wait(1);
-    cs = 1;
-    Thread::wait(1);
-}
-
 //********************************************** Thread functions **********************************************************
 void Temp_Feedback_Control(void const *args)
 {
     // Init. config
-    ADT7320_config(CSac);
-    ADT7320_config(CSbd);
-
     double SetP_AC, SetP_BD;
     double ProcessValueAC, ProcessValueBD;
     double voutAC, voutBD;
 
     int state = 2;
     int pid_state = MANUAL;
+
+    /* Temperature Sensors */
+    ADT7320 AC_Temp_sensor( spi1, CSac, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
+    ADT7320 BD_Temp_sensor( spi1, CSbd, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
+
+    DAC7554 AC_Heater_DAC( spi1, CS_dac, DAC_AC_SEL, 3.3 );
+    DAC7554 BD_Heater_DAC( spi1, CS_dac, DAC_BD_SEL, 3.3 );
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
     PID pidAC( &ProcessValueAC, &voutAC, &SetP_AC, get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD), DIRECT );
@@ -245,8 +162,8 @@ void Temp_Feedback_Control(void const *args)
 	pidBD.SetMode( pid_state );
 
         // Read temp from ADT7320 in RFFEs
-        set_value(TempAC,ADT7320_read(CSac));
-        set_value(TempBD,ADT7320_read(CSbd));
+        set_value(TempAC,AC_Temp_sensor.Read());
+        set_value(TempBD,BD_Temp_sensor.Read());
 
         // Update the Process Values
         ProcessValueAC = get_value64(TempAC);
@@ -257,6 +174,8 @@ void Temp_Feedback_Control(void const *args)
         SetP_BD = get_value64(Set_PointBD);
 
 #ifdef DEBUG_PRINTF
+        printf( "AC_Temp = %f \n", ProcessValueAC );
+        printf( "BD_Temp = %f \n", ProcessValueBD );
         printf( "PID_AC Params:\n");
         printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD));
         printf( "PID_BD Params:\n");
@@ -298,8 +217,8 @@ void Temp_Feedback_Control(void const *args)
         set_value(HeaterAC, voutAC);
         set_value(HeaterBD, voutBD);
 
-        DAC7554_write(CS_dac, DAC_AC_SEL, voutAC);
-        DAC7554_write(CS_dac, DAC_BD_SEL, voutBD);
+        AC_Heater_DAC.Write( voutAC );
+        BD_Heater_DAC.Write( voutBD );
 
 #ifdef DEBUG_PRINTF
         printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
@@ -342,10 +261,12 @@ void Attenuators_Control(void const *arg)
         if ( prev_att1 != get_value64(Att) ) {
             // Checking and setting attenuators value to fisable values
             set_value(Att,(float)(int(get_value64(Att)*2))/2);
+
+#ifdef DEBUG_PRINTF
+            printf("\nAtt values updated from: %f to %f\n", prev_att1, get_value64(Att));
+#endif
             // Updating previous values
             prev_att1 = get_value64(Att);
-            //printf("\nAtt values requested: \n Att: %f \n Att2: %f.\n",prev_att1,prev_att2);
-            //printf("\nAtt values updated to: \n Att: %f \n Att2: %f.\n",(float)(int(prev_att1*2))/2,(float)(int(prev_att2*2))/2);
             int2bin6(int(prev_att1*2), attVec1);
 
             LE = 0;
@@ -408,6 +329,7 @@ void Update_Software(char * old_name, char * name)
 
 }
 
+#if 0
 void Data_Check( void )
 {
     for (int i = 0; i < FILE_DATASIZE; i++) {

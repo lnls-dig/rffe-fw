@@ -1,8 +1,7 @@
-#include "mbed.h"
-#include "rtos.h"
+#ifndef DRIVERS_H_
+#define DRIVERS_H_
 
-double AD7792(mbed::SPI spi);
-int TCA6424(mbed::I2C i2c, int addr, bool *port0, bool *port1, bool *port2);
-int TCA6424(mbed::I2C i2c, int addr, bool *port0, unsigned char n);
-int TCA6424(mbed::I2C i2c, int addr, bool *port0, bool *port1, unsigned char n);
-void DAC7554(mbed::SPI spi, mbed::DigitalOut Sync, float Refin, float voutA, float voutB, float voutC, float voutD);
+#include "ADT7320.h"
+#include "DAC7554.h"
+
+#endif
