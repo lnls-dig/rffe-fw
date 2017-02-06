@@ -373,17 +373,17 @@ int main( void )
     // Version
     set_value(Version,"V2_0005");
     //PID_AC Kc parameter
-    set_value(PID_AC_Kc, 0);
+    set_value(PID_AC_Kc, 10.5);
     //PID_AC tauI parameter
-    set_value(PID_AC_tauI, 0);
+    set_value(PID_AC_tauI, 12);
     //PID_AC tauI parameter
-    set_value(PID_AC_tauD, 0);
+    set_value(PID_AC_tauD, 2);
     //PID_BD Kc parameter
-    set_value(PID_BD_Kc, 0);
+    set_value(PID_BD_Kc, 10.5);
     //PID_BD tauI parameter
-    set_value(PID_BD_tauI, 0);
+    set_value(PID_BD_tauI, 12);
     //PID_BD tauI parameter
-    set_value(PID_BD_tauD, 0);
+    set_value(PID_BD_tauD, 2);
 
     for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
         rffe_vars[i].info.id = i;
