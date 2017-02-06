@@ -103,7 +103,7 @@ struct bsmp_var
 {
     struct bsmp_var_info info;  // Information about the variable identification
     bool                 (*value_ok) (struct bsmp_var *, uint8_t *);  // Checker
-    uint8_t              *data; // Pointer to the value of the variable.
+    void                 *data; // Pointer to the value of the variable.
     void                 *user; // The user can make use of this pointer at
                                 // will. It is not touched by BSMP.
 };

@@ -35,49 +35,49 @@ extern "C" {
 extern "C" void mbed_reset();
 
 // BSMP Variables arrays
-uint8_t Att[8];
-uint8_t TempAC[8];
-uint8_t TempBD[8];
-uint8_t Set_PointAC[8];
-uint8_t Set_PointBD[8];
+double Att[1];
+double TempAC[1];
+double TempBD[1];
+double Set_PointAC[1];
+double Set_PointBD[1];
 uint8_t Temp_Control[1];
-uint8_t HeaterAC[8];
-uint8_t HeaterBD[8];
+double HeaterAC[1];
+double HeaterBD[1];
 uint8_t Reset[1];
 uint8_t Reprogramming[1];
 uint8_t Data[FILE_DATASIZE];
-uint8_t Version[8];
-uint8_t PID_AC_Kc[8];
-uint8_t PID_AC_tauI[8];
-uint8_t PID_AC_tauD[8];
-uint8_t PID_BD_Kc[8];
-uint8_t PID_BD_tauI[8];
-uint8_t PID_BD_tauD[8];
+char Version[8];
+double PID_AC_Kc[1];
+double PID_AC_tauI[1];
+double PID_AC_tauD[1];
+double PID_BD_Kc[1];
+double PID_BD_tauI[1];
+double PID_BD_tauD[1];
 
 #define READ_ONLY  0
 #define READ_WRITE 1
 
-#define RFFE_VAR( data, rw, size ) { { 0, rw, size }, NULL, data, NULL }
+#define RFFE_VAR( data, rw ) { { 0, rw, sizeof(data[0]) }, NULL, data, NULL }
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
 struct bsmp_var rffe_vars[] = {
-    [0]  = RFFE_VAR( Att,            READ_WRITE,  8 ), // Attenuators
-    [1]  = RFFE_VAR( TempAC,         READ_ONLY,   8 ), // TempAC
-    [2]  = RFFE_VAR( TempBD,         READ_ONLY,   8 ), // TempBD
-    [3]  = RFFE_VAR( Set_PointAC,    READ_WRITE,  8 ), // Set_PointAC
-    [4]  = RFFE_VAR( Set_PointBD,    READ_WRITE,  8 ), // Set_PointBD
-    [5]  = RFFE_VAR( Temp_Control,   READ_WRITE,  1 ), // Temp_Control
-    [6]  = RFFE_VAR( HeaterAC,       READ_WRITE,  8 ), // HeaterAC
-    [7]  = RFFE_VAR( HeaterBD,       READ_WRITE,  8 ), // HeaterBD
-    [8]  = RFFE_VAR( Reset,          READ_WRITE,  1 ), // Reset
-    [9]  = RFFE_VAR( Reprogramming,  READ_WRITE,  1 ), // Reprogramming
-    [10] = RFFE_VAR( Data,           READ_WRITE,  FILE_DATASIZE ), // Data
-    [11] = RFFE_VAR( Version,        READ_ONLY,   8 ), // Version
-    [12] = RFFE_VAR( PID_AC_Kc,      READ_WRITE,  8 ), // PID_AC_Kc
-    [13] = RFFE_VAR( PID_AC_tauI,    READ_WRITE,  8 ), // PID_AC_tauI
-    [14] = RFFE_VAR( PID_AC_tauD,    READ_WRITE,  8 ), // PID_AC_tauD
-    [15] = RFFE_VAR( PID_BD_Kc,      READ_WRITE,  8 ), // PID_BD_Kc
-    [16] = RFFE_VAR( PID_BD_tauI,    READ_WRITE,  8 ), // PID_BD_tauI
-    [17] = RFFE_VAR( PID_BD_tauD,    READ_WRITE,  8 ), // PID_BD_tauD
+    [0]  = RFFE_VAR( Att,            READ_WRITE ), // Attenuators
+    [1]  = RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
+    [2]  = RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
+    [3]  = RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
+    [4]  = RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
+    [5]  = RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
+    [6]  = RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
+    [7]  = RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
+    [8]  = RFFE_VAR( Reset,          READ_WRITE ), // Reset
+    [9]  = RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
+    [10] = RFFE_VAR( Data,           READ_WRITE ), // Data
+    [11] = RFFE_VAR( Version,        READ_ONLY ), // Version
+    [12] = RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
+    [13] = RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
+    [14] = RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
+    [15] = RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
+    [16] = RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
+    [17] = RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
 };
 
 // Create the local filesystem under the name "local"

@@ -197,7 +197,7 @@ void message(command_header *recv, command_header *send, var_list * Vars){
     return;
 }
 
-void set_value(uint8_t *var, double value){
+void set_value(double *var, double value){
     Charge aux;
 
     bsmp_var_mutex.lock();
@@ -206,13 +206,13 @@ void set_value(uint8_t *var, double value){
     bsmp_var_mutex.unlock();
 }
 
-void set_value(uint8_t *var, char const* value){
+void set_value(char *var, char const* value){
     bsmp_var_mutex.lock();
     memcpy(var,value, sizeof(char));
     bsmp_var_mutex.unlock();
 }
 
-void set_value(uint8_t *var, int value){
+void set_value(int *var, int value){
     Charge aux;
 
     bsmp_var_mutex.lock();

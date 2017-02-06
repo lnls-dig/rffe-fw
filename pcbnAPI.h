@@ -70,9 +70,9 @@ void internal_error_command(command_header *error);
 
 void message(command_header *recv, command_header *send, var_list * Vars);
 
-void set_value(uint8_t *var, int value);
-void set_value(uint8_t *var, double value);
-void set_value(uint8_t *var, char const* value);
+void set_value(int *var, int value);
+void set_value(double *var, double value);
+void set_value(char *var, char const* value);
 unsigned char get_value8(void *var);
 int get_value32(void *var);
 double get_value64(void *var);
