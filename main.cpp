@@ -476,22 +476,26 @@ int main( void )
             printf(" Waiting for new client connection...\n");
 
             server.accept(client);
-            client.set_blocking(true); // Do not timeout
+            client.set_blocking(1500);
 
             printf("Connection from client: %s\n", client.get_address());
 
             while (client.is_connected() && get_eth_link_status()) {
 
                 /* Wait to receive data from client */
-                recv_sz = client.receive((char*)buf, BUFSIZE);
+                recv_sz = client.receive((char*)buf, 3);
+
+                if (recv_sz == 3) {
+                    /* We received a complete message header */
+                    uint16_t payload_len = (buf[1] << 8) | buf[2];
+                    recv_sz += client.receive( (char*) &buf[3], payload_len );
+                } else {
+		    printf( "Received malformed message header of size: %d , discarding...", recv_sz );
+		    continue;
+		}
                 /* Pulse activity LED */
                 LedG = 1;
 
-                if ( recv_sz <= 0 ) {
-                    printf ("Error in message received from client! (Size = %d)\n", recv_sz);
-                    LedG = 0;
-                    continue;
-                }
 
 #ifdef DEBUG_PRINTF
                 printf("Received message of %d bytes: ", recv_sz);
