@@ -1,10 +1,15 @@
+#include "rtos.h"
 #include "pcbnAPI.h"
 
 //int build_variable(int ID, int type, int size, int value);
 
+// Mutex to access shared resources (write/read from BSMP variables)
+Mutex bsmp_var_mutex;
+
 unsigned char calculate_size(unsigned char size){
-    if (size || 128)
+    if (size || 128) {
         return 128*(size+1)+2;
+    }
     return size;
 }
 
@@ -39,7 +44,7 @@ void var_read_command_ask(command_header *varread){
 }
 
 void var_read_command_answer(command_header *varread, int size){
-    varread->command = VAR_READ_CODE_ANSWER;    
+    varread->command = VAR_READ_CODE_ANSWER;
     varread->size = size;
     return;
 }
@@ -75,7 +80,7 @@ void op_not_supported_command(command_header *error){
     error_commands(error,OP_NOT_SUPPORTED_CODE);
     return;
 }
-    
+
 void invalid_id_command(command_header *error){
     error_commands(error,INVALID_ID_CODE);
     return;
@@ -94,7 +99,7 @@ void invalid_payload_command(command_header *error){
 void read_only_command(command_header *error){
     error_commands(error,READ_ONLY_COMMAND);
     return;
-} 
+}
 
 void no_memory_command(command_header *error){
     error_commands(error,NO_MEMORY_CODE);
@@ -110,111 +115,135 @@ void message(command_header *recv, command_header *send, var_list * Vars){
     Charge aux;
     switch (recv->command)
     {
-        case STATUS_CODE_ASK:
-            if (recv->size != 0) {
-                bad_message_command(send);
-                break;
-            }
-            status_command_answer(send);
+    case STATUS_CODE_ASK:
+        if (recv->size != 0) {
+            bad_message_command(send);
             break;
-            
-        case VAR_LIST_CODE_ASK:
-            if (recv->size != 0) {
-                bad_message_command(send);
-                break;
-            }
-            var_list_command_answer(send,Vars->count);
-            for (int n = 0; n < Vars->count; n++) {
-                send->charge[n] = Vars->var[n]->size + 0x80*(Vars->var[n]->type);
-            }
-            break;
-        
-        case VAR_READ_CODE_ASK:
-            if (recv->size != 1) {
-                invalid_payload_command(send);
-                break;
-            }
+        }
+        status_command_answer(send);
+        break;
 
-            if (recv->charge[0] >= Vars->count) {
-                invalid_id_command(send);
-                break;
-            }
-                
-            var_read_command_answer(send,Vars->var[recv->charge[0]]->size);
-            memcpy(aux.charge1,&(Vars->var[recv->charge[0]]->value),Vars->var[recv->charge[0]]->size);
-            
-            printf("\nVariable ID: %d",recv->charge[0]);
-            if (Vars->var[recv->charge[0]]->size == 1)
-                printf("\nValue: %2X\n",aux.charge1[0]);
-            if (Vars->var[recv->charge[0]]->size == 2)
-                printf("\nValue: %d\n",aux.charge2[0]);
-            if (Vars->var[recv->charge[0]]->size == 4)
-                printf("\nValue: %f\n",aux.charge3[0]);
-                
-            memcpy(send->charge,&(Vars->var[recv->charge[0]]->value),Vars->var[recv->charge[0]]->size);
+    case VAR_LIST_CODE_ASK:
+        if (recv->size != 0) {
+            bad_message_command(send);
             break;
+        }
+        var_list_command_answer(send,Vars->count);
+	bsmp_var_mutex.lock();
+        for (uint16_t n = 0; n < Vars->count; n++) {
+            send->charge[n] = Vars->var[n]->size + 0x80*(Vars->var[n]->type);
+        }
+	bsmp_var_mutex.unlock();
+        break;
 
-        case VAR_WRITE_CODE_ASK:
-            if (recv->charge[0] >= Vars->count) {
-                invalid_id_command(send);
-                break;
-            }
-                
-            if (recv->size != (Vars->var[recv->charge[0]]->size + 1)) {
-                invalid_payload_command(send);
-                break;
-            }
-                
-            if (Vars->var[recv->charge[0]]->type == 0) {
-                read_only_command(send);
-                break;
-            }
-            
-            memcpy(&(Vars->var[recv->charge[0]]->value),&recv->charge[1],Vars->var[recv->charge[0]]->size);
-            ok_command(send);
+    case VAR_READ_CODE_ASK:
+        if (recv->size != 1) {
+            invalid_payload_command(send);
             break;
+        }
 
-        default:
-            op_not_supported_command(send);
+        if (recv->charge[0] >= Vars->count) {
+            invalid_id_command(send);
+            break;
+        }
+
+	bsmp_var_mutex.lock();
+        var_read_command_answer(send,Vars->var[recv->charge[0]]->size);
+
+        memcpy(aux.charge1,&(Vars->var[recv->charge[0]]->value),Vars->var[recv->charge[0]]->size);
+
+        printf("\nVariable ID: %d",recv->charge[0]);
+        if (Vars->var[recv->charge[0]]->size == 1)
+            printf("\nValue: %2X\n",aux.charge1[0]);
+        if (Vars->var[recv->charge[0]]->size == 2)
+            printf("\nValue: %d\n",aux.charge2[0]);
+        if (Vars->var[recv->charge[0]]->size == 4)
+            printf("\nValue: %f\n",aux.charge3[0]);
+
+        memcpy(send->charge,&(Vars->var[recv->charge[0]]->value),Vars->var[recv->charge[0]]->size);
+	bsmp_var_mutex.unlock();
+        break;
+
+    case VAR_WRITE_CODE_ASK:
+        if (recv->charge[0] >= Vars->count) {
+            invalid_id_command(send);
+            break;
+        }
+
+        if (recv->size != (Vars->var[recv->charge[0]]->size + 1)) {
+            invalid_payload_command(send);
+            break;
+        }
+
+        if (Vars->var[recv->charge[0]]->type == 0) {
+            read_only_command(send);
+            break;
+        }
+
+	bsmp_var_mutex.lock();
+        memcpy(&(Vars->var[recv->charge[0]]->value),&recv->charge[1],Vars->var[recv->charge[0]]->size);
+        ok_command(send);
+	bsmp_var_mutex.unlock();
+        break;
+
+    default:
+        op_not_supported_command(send);
     }
     /*
-    free(aux.charge1);
-    free(aux.charge2);
-    free(aux.charge3);
+      free(aux.charge1);
+      free(aux.charge2);
+      free(aux.charge3);
     */
     return;
 }
 
 void set_value(uint8_t *var, double value){
     Charge aux;
+
+    bsmp_var_mutex.lock();
     aux.charge3[0] = value;
-    memcpy(var,&aux,8);
+    memcpy(var,&aux, sizeof(double));
+    bsmp_var_mutex.unlock();
 }
 
 void set_value(uint8_t *var, char const* value){
-    memcpy(var,value,8);
+    bsmp_var_mutex.lock();
+    memcpy(var,value, sizeof(char));
+    bsmp_var_mutex.unlock();
 }
 
 void set_value(uint8_t *var, int value){
     Charge aux;
+
+    bsmp_var_mutex.lock();
     aux.charge2[0] = value;
-    memcpy(var,&aux,1);
+    memcpy(var,&aux, sizeof(int));
+    bsmp_var_mutex.unlock();
 }
 
 unsigned char get_value8(uint8_t *var){
     Charge aux;
-    memcpy(&aux,&var,1);
+    bsmp_var_mutex.lock();
+    memcpy(&aux,&var, sizeof(unsigned char));
+    bsmp_var_mutex.unlock();
     return aux.charge1[0];
 }
 
 int get_value32(uint8_t *var){
     Charge aux;
-    memcpy(&aux,&var,4);
+
+    bsmp_var_mutex.lock();
+    memcpy(&aux,&var, sizeof(int));
+    bsmp_var_mutex.unlock();
     return aux.charge2[0];
 }
 
 double get_value64(uint8_t *var){
     Charge aux;
-    memcpy(&aux,var,8);
+
+    bsmp_var_mutex.lock();
+    memcpy(&aux,var, sizeof(double));
+    bsmp_var_mutex.unlock();
+
     return aux.charge3[0];
 }
