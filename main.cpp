@@ -338,6 +338,7 @@ void Data_Check( void )
         fputc(Data[i], fp);
     }
 }
+#endif
 
 int main( void )
 {
