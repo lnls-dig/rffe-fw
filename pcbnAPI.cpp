@@ -221,7 +221,7 @@ void set_value(uint8_t *var, int value){
     bsmp_var_mutex.unlock();
 }
 
-unsigned char get_value8(uint8_t *var){
+unsigned char get_value8(void *var){
     Charge aux;
     bsmp_var_mutex.lock();
     memcpy(&aux,&var, sizeof(unsigned char));
@@ -229,16 +229,17 @@ unsigned char get_value8(uint8_t *var){
     return aux.charge1[0];
 }
 
-int get_value32(uint8_t *var){
+int get_value32(void *var){
     Charge aux;
 
     bsmp_var_mutex.lock();
     memcpy(&aux,&var, sizeof(int));
     bsmp_var_mutex.unlock();
+
     return aux.charge2[0];
 }
 
-double get_value64(uint8_t *var){
+double get_value64(void *var){
     Charge aux;
 
     bsmp_var_mutex.lock();
