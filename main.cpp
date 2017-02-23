@@ -57,7 +57,7 @@ double PID_BD_tauD[1];
 #define READ_ONLY  0
 #define READ_WRITE 1
 
-#define RFFE_VAR( data, rw ) { { 0, rw, sizeof(data[0]) }, NULL, data, NULL }
+#define RFFE_VAR( data, rw ) { { 0, rw, sizeof(data) }, NULL, data, NULL }
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
 struct bsmp_var rffe_vars[] = {
     [0]  = RFFE_VAR( Att,            READ_WRITE ), // Attenuators
