@@ -443,15 +443,15 @@ int main( void )
 
     // Variables initialization
     // Attenuators
-    set_value(Att,30.0);
+    set_value(Att, 30.0);
     // TempAC
-    set_value(TempAC,0.0);
+    set_value(TempAC, 0.0);
     // TempBD
-    set_value(TempBD,0.0);
+    set_value(TempBD, 0.0);
     // Set_PointAC
-    set_value(Set_PointAC,51.5);
+    set_value(Set_PointAC, 51.5);
     // Set_PointBD
-    set_value(Set_PointBD,51.5);
+    set_value(Set_PointBD, 51.5);
     // Temp_Control
     set_value(Temp_Control, 0);
     // HeaterAC
@@ -589,9 +589,9 @@ int main( void )
                     uint16_t payload_len = (buf[1] << 8) | buf[2];
                     recv_sz += client.receive( (char*) &buf[3], payload_len );
                 } else {
-		    printf( "Received malformed message header of size: %d , discarding...", recv_sz );
-		    continue;
-		}
+                    printf( "Received malformed message header of size: %d , discarding...", recv_sz );
+                    continue;
+                }
                 /* Pulse activity LED */
                 LedG = 1;
 
