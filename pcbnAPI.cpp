@@ -206,9 +206,10 @@ void set_value(double *var, double value){
     bsmp_var_mutex.unlock();
 }
 
-void set_value(char *var, char const* value){
+
+void set_value(char *var, char const* value, size_t sz){
     bsmp_var_mutex.lock();
-    memcpy(var,value, sizeof(char));
+    memcpy(var,value, sz);
     bsmp_var_mutex.unlock();
 }
 
