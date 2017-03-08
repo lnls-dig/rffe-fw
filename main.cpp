@@ -11,6 +11,7 @@
 
 #include "PID.h"
 #include "Drivers.h"
+#include "cli.h"
 
 #include "lpc_phy.h"
 extern "C" {
@@ -343,11 +344,98 @@ void Data_Check( void )
 }
 #endif
 
+char cli_cmd[SCMD_MAX_CMD_LEN+1];
+
+void commandCallback(char *cmdIn, void *extraContext) {
+    // all our commands will be recieved async in commandCallback
+    // we don't want to do time consuming things since it could
+    // block the reader and allow the uart to overflow so we simply
+    // copy it out in the callback and then process it latter.
+
+#ifdef DEBUG_PRINTF
+    printf("CLI Command Received =%s\r\n", cli_cmd);
+#endif
+    strcpy(cli_cmd, cmdIn);
+
+    Thread *CLI_Thread = static_cast<Thread *>(extraContext);
+    CLI_Thread->signal_set(0x01);
+}
+
+void CLI_Proccess( void const * args)
+{
+    char *cmd, *save_ptr;
+    char *arg[2];
+    printf("Initializing CLI_Proccess thread\n");
+    for( ; ; ) {
+        Thread::signal_wait(0x01);
+        cmd = strtok_r( cli_cmd, " ", &save_ptr);
+
+        for ( uint8_t i = 0; i < sizeof(arg)/sizeof(arg[0]); i++) {
+            arg[i] = strtok_r( NULL, " ", &save_ptr);
+        }
+
+        if (strcmp( cmd, "dump" ) == 0) {
+            printf("RFFE Vars dump:\n");
+            printf("\tIP-Address: %s\n", rffe_ip);
+            printf("\tMAC-Address: %s\n", rffe_mac);
+            printf("\t[0]  Att: %f\n", get_value64(Att));
+            printf("\t[1]  Temperature AC: %f\n", get_value64(TempAC));
+            printf("\t[2]  Temperature BD: %f\n", get_value64(TempBD));
+            printf("\t[3]  Set PointAC: %f\n", get_value64(Set_PointAC));
+            printf("\t[4]  Set PointBD: %f\n", get_value64(Set_PointBD));
+            printf("\t[5]  Temperature Control PID: %s\n", get_value32(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            printf("\t[6]  Heater AC: %f\n", get_value64(HeaterAC));
+            printf("\t[7]  Heater BD: %f\n", get_value64(HeaterBD));
+            printf("\t[8]  Reset: %d\n", get_value32(Reset));
+            printf("\t[9]  Reprogramming: %d\n", get_value32(Reprogramming));
+            printf("\t[10] New FW Data\n");
+            printf("\t[11] Firmware version: %s\n", FW_VERSION);
+            printf("\t[12] PID_AC_Kc: %f\n", get_value64(PID_AC_Kc));
+            printf("\t[13] PID_AC_tauI: %f\n", get_value64(PID_AC_tauI));
+            printf("\t[14] PID_AC_tauD: %f\n", get_value64(PID_AC_tauD));
+            printf("\t[15] PID_BD_Kc: %f\n", get_value64(PID_BD_Kc));
+            printf("\t[16] PID_BD_tauI: %f\n", get_value64(PID_BD_tauI));
+            printf("\t[17] PID_BD_tauD: %f\n", get_value64(PID_BD_tauD));
+            printf("\n");
+        } else if (strcmp( cmd, "set" ) == 0) {
+            if ((arg[0] == NULL) || (arg[1] == NULL)) {
+                printf("Command \"set\" used but no arguments given! Type \"help\" to see its correct usage.\n");
+                continue;
+            }
+            uint8_t var_index = strtol( arg[0], NULL, 10);
+
+            if (rffe_vars[var_index].info.writable == READ_ONLY) {
+                printf("The requested variable is READ_ONLY!\n");
+                continue;
+            }
+            if (rffe_vars[var_index].info.size == sizeof(int)){
+                int arg_int = strtol( arg[1], NULL, 10);
+                set_value( (int *)rffe_vars[var_index].data, arg_int);
+            } else if ( (rffe_vars[var_index].info.size == sizeof(double)) ) {
+                double arg_dbl = strtod( arg[1], NULL);
+                set_value( (double *)rffe_vars[var_index].data, arg_dbl);
+            } else {
+                printf("Unknown data type to set!\n");
+            }
+
+        } else if ((strcmp( cmd, "help" ) == 0) || (strcmp( cmd, "?" ) == 0) ) {
+            printf("RFFE Firmware help. Available commands:\n");
+            printf("\tCMD\t[arg1]\t[arg2]\n");
+            printf("\tdump\t\t\tList all variables available and their current status\n");
+            printf("\tset\t[VAR]\t[VALUE]\tSet value to a variable in the list\n");
+            printf("\thelp\t\t\tShow this help menu\n");
+        } else {
+            printf("Command \"%s\" not recognized! Please use the command \"help\" to check the CLI usage\n", cli_cmd);
+        }
+    }
+}
+
 int main( void )
 {
     //Init serial port for info printf
     pc.baud(115200);
-    printf("RFFE Control Firmware\n");
+
+    printf("RFFE Control Firmware %s\n", FW_VERSION);
 
     bsmp_server_t *bsmp = bsmp_server_new();
     led_g=0;
@@ -439,6 +527,11 @@ int main( void )
 
     Thread Temp_Control_thread(Temp_Feedback_Control);
     printf("Initializing Temp Control thread\n");
+
+    Thread CLI_Proccess_Thread(CLI_Proccess);
+
+    // Instantiate our command processor for the  USB serial line.
+    scMake(&pc, commandCallback, &CLI_Proccess_Thread);
 
     // Ethernet initialization
     EthernetInterface eth;

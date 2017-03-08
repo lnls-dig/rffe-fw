@@ -42,7 +42,7 @@ endif()
 include(mbed.cmake)
 
 #Add all project sources to be compiled
-set(PROJ_SRCS main.cpp pcbnAPI.cpp)
+set(PROJ_SRCS main.cpp pcbnAPI.cpp cli.cpp)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(PID)
