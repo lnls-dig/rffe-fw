@@ -84,7 +84,8 @@ struct bsmp_var rffe_vars[] = {
 LocalFileSystem localdir("local");
 FILE *fp;
 
-// Inicializations - MBED
+char rffe_ip[16];
+char rffe_mac[18];
 
 // Hardware Initialization - MBED
 
@@ -445,12 +446,11 @@ int main( void )
     TCPSocketServer server;
     int recv_sz, sent_sz;
 
-    // Ethernet initialization
 #if defined(ETH_DHCP)
     eth.init(); //Use DHCP
 #else
 #if defined(ETH_FIXIP)
-    eth.init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use  these parameters for static IP
+    eth.init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use given parameters for static IP
 #else
 #error "No Ethernet addressing mode selected! Please choose between DHCP or Fixed IP!"
 #endif
@@ -465,8 +465,11 @@ int main( void )
         }
         printf("Success! RFFE eth server is up!\n");
 
-        printf("RFFE IP: %s\n", eth.getIPAddress());
-        printf("RFFE MAC Address: %s\n", eth.getMACAddress());
+        strncpy(rffe_ip, eth.getIPAddress(), sizeof(rffe_ip));
+        strncpy(rffe_mac, eth.getMACAddress(), sizeof(rffe_mac));
+
+        printf("RFFE IP: %s\n", rffe_ip);
+        printf("RFFE MAC Address: %s\n", rffe_mac);
         printf("Listening on port %d...\n", SERVER_PORT);
 
         server.bind(SERVER_PORT);
