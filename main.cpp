@@ -487,23 +487,6 @@ int main( void )
     int s,numVer;
     uint8_t state = 0;
 
-    /*
-      for (s = 0; s < VarCount; s++) {
-      printf("\nId: %d",dummy[s].info.id);
-      printf("\nWritable: %d",dummy[s].info.writable);
-      printf("\nSize: %d bytes",dummy[s].info.size);
-      if (dummy[s].info.size == 1) {
-      printf("\nValue: %d",*dummy[s].data);
-      } else {
-      if (s != VersionID)
-      printf("\nValue: %f",get_value64(dummy[s].data));
-      else
-      printf("\nValue: %s",dummy[s].data);
-      }
-      printf("\n");
-      }
-    */
-
     struct bsmp_raw_packet request;
     struct bsmp_raw_packet response;
     uint8_t buf[BUFSIZE];
