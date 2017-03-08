@@ -40,11 +40,11 @@ double TempAC[1];
 double TempBD[1];
 double Set_PointAC[1];
 double Set_PointBD[1];
-uint8_t Temp_Control[1];
+int Temp_Control[1];
 double HeaterAC[1];
 double HeaterBD[1];
-uint8_t Reset[1];
-uint8_t Reprogramming[1];
+int Reset[1];
+int Reprogramming[1];
 uint8_t Data[FILE_DATASIZE];
 char Version[8];
 double PID_AC_Kc[1];
@@ -85,6 +85,8 @@ LocalFileSystem localdir("local");
 FILE *fp;
 
 // Inicializations - MBED
+
+// Hardware Initialization - MBED
 
 // MBED Leds
 DigitalOut led1(LED1);
@@ -151,15 +153,15 @@ void Temp_Feedback_Control(void const *args)
 
     while (1) {
 
-        if (state != Temp_Control[0]) {
-            printf ("New temp_control state : %s\n", Temp_Control[0] ? "AUTOMATIC":"MANUAL");
-            state = Temp_Control[0];
+        if (state != get_value32(Temp_Control)) {
+            printf ("New temp_control state : %s\n", get_value32(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            state = get_value32(Temp_Control);
 
-	    pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
+            pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
         }
 
-	pidAC.SetMode( pid_state );
-	pidBD.SetMode( pid_state );
+        pidAC.SetMode( pid_state );
+        pidBD.SetMode( pid_state );
 
         // Read temp from ADT7320 in RFFEs
         set_value(TempAC,AC_Temp_sensor.Read());
@@ -362,15 +364,15 @@ int main( void )
     // Set_PointBD
     set_value(Set_PointBD,51.5);
     // Temp_Control
-    Temp_Control[0] = 0;
+    set_value(Temp_Control, 0);
     // HeaterAC
     set_value(HeaterAC, 0.0);
     // HeaterBD
     set_value(HeaterBD, 0.0);
     // Reset
-    Reset[0] = 0;
+    set_value(Reset, 0);
     // Reprogramming
-    Reprogramming[0] = 0;
+    set_value(Reprogramming, 0);
     // Version
     set_value(Version,"V2_0005");
     //PID_AC Kc parameter
@@ -570,7 +572,8 @@ int main( void )
                     Data_Check();
                 }
 #endif
-                if (Reset[0] == 1) {
+                if (get_value32(Reset) == 1) {
+                    printf("Resetting MBED!\n");
                     mbed_reset();
                 }
 
