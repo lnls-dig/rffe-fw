@@ -33,6 +33,8 @@ extern "C" {
 
 #define FILE_DATASIZE   127
 
+#define FW_VERSION      "V2_0005"
+
 extern "C" void mbed_reset();
 
 // BSMP Variables arrays
@@ -463,7 +465,7 @@ int main( void )
     // Reprogramming
     set_value(Reprogramming, 0);
     // Version
-    set_value(Version,"V2_0005");
+    set_value(Version, FW_VERSION, sizeof(FW_VERSION));
     //PID_AC Kc parameter
     set_value(PID_AC_Kc, 10.5);
     //PID_AC tauI parameter
