@@ -567,12 +567,12 @@ int main( void )
             while (client.is_connected() && get_eth_link_status()) {
 
                 /* Wait to receive data from client */
-                recv_sz = client.receive((char*)buf, 3);
+                recv_sz = client.receive_all((char*)buf, 3);
 
                 if (recv_sz == 3) {
                     /* We received a complete message header */
                     uint16_t payload_len = (buf[1] << 8) | buf[2];
-                    recv_sz += client.receive( (char*) &buf[3], payload_len );
+                    recv_sz += client.receive_all( (char*) &buf[3], payload_len );
                 } else {
                     printf( "Received malformed message header of size: %d , discarding...", recv_sz );
                     continue;
@@ -596,7 +596,7 @@ int main( void )
 
                 bsmp_process_packet(bsmp, &request, &response);
 
-                sent_sz = client.send((char*)response.data, response.len);
+                sent_sz = client.send_all((char*)response.data, response.len);
 #ifdef DEBUG_PRINTF
                 printf("Sending message of %d bytes: ", sent_sz);
                 for (int i = 0; i < sent_sz; i++) {
