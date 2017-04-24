@@ -572,7 +572,12 @@ int main( void )
                 if (recv_sz == 3) {
                     /* We received a complete message header */
                     uint16_t payload_len = (buf[1] << 8) | buf[2];
-                    recv_sz += client.receive_all( (char*) &buf[3], payload_len );
+                    /* Check if we need to receive some more bytes. This
+                     * fixes #9 github issue, in that we end up stuck here
+                     * waiting for more bytes that never comes */
+                    if (payload_len > 0) {
+                        recv_sz += client.receive_all( (char*) &buf[3], payload_len );
+                    }
                 } else {
                     printf( "Received malformed message header of size: %d , discarding...", recv_sz );
                     continue;
