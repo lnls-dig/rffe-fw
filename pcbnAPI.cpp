@@ -222,6 +222,15 @@ void set_value(int *var, int value){
     bsmp_var_mutex.unlock();
 }
 
+void set_value(uint8_t *var, uint8_t value){
+    Charge aux;
+
+    bsmp_var_mutex.lock();
+    aux.charge1[0] = value;
+    memcpy(var,&aux, sizeof(uint8_t));
+    bsmp_var_mutex.unlock();
+}
+
 unsigned char get_value8(void *var){
     Charge aux;
     bsmp_var_mutex.lock();
