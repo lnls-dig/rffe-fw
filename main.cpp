@@ -43,11 +43,11 @@ double TempAC[1];
 double TempBD[1];
 double Set_PointAC[1];
 double Set_PointBD[1];
-int Temp_Control[1];
+uint8_t Temp_Control[1];
 double HeaterAC[1];
 double HeaterBD[1];
-int Reset[1];
-int Reprogramming[1];
+uint8_t Reset[1];
+uint8_t Reprogramming[1];
 uint8_t Data[FILE_DATASIZE];
 char Version[8];
 double PID_AC_Kc[1];
@@ -157,9 +157,9 @@ void Temp_Feedback_Control(void const *args)
 
     while (1) {
 
-        if (state != get_value32(Temp_Control)) {
-            printf ("New temp_control state : %s\n", get_value32(Temp_Control) ? "AUTOMATIC":"MANUAL");
-            state = get_value32(Temp_Control);
+        if (state != get_value8(Temp_Control)) {
+            printf ("New temp_control state : %s\n", get_value8(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            state = get_value8(Temp_Control);
 
             pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
         }
@@ -385,11 +385,11 @@ void CLI_Proccess( void const * args)
             printf("\t[2]  Temperature BD: %f\n", get_value64(TempBD));
             printf("\t[3]  Set PointAC: %f\n", get_value64(Set_PointAC));
             printf("\t[4]  Set PointBD: %f\n", get_value64(Set_PointBD));
-            printf("\t[5]  Temperature Control PID: %s\n", get_value32(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            printf("\t[5]  Temperature Control PID: %s\n", get_value8(Temp_Control) ? "AUTOMATIC":"MANUAL");
             printf("\t[6]  Heater AC: %f\n", get_value64(HeaterAC));
             printf("\t[7]  Heater BD: %f\n", get_value64(HeaterBD));
-            printf("\t[8]  Reset: %d\n", get_value32(Reset));
-            printf("\t[9]  Reprogramming: %d\n", get_value32(Reprogramming));
+            printf("\t[8]  Reset: %d\n", get_value8(Reset));
+            printf("\t[9]  Reprogramming: %d\n", get_value8(Reprogramming));
             printf("\t[10] New FW Data\n");
             printf("\t[11] Firmware version: %s\n", FW_VERSION);
             printf("\t[12] PID_AC_Kc: %f\n", get_value64(PID_AC_Kc));
@@ -416,6 +416,9 @@ void CLI_Proccess( void const * args)
             } else if ( (rffe_vars[var_index].info.size == sizeof(double)) ) {
                 double arg_dbl = strtod( arg[1], NULL);
                 set_value( (double *)rffe_vars[var_index].data, arg_dbl);
+            } else if ( (rffe_vars[var_index].info.size == sizeof(uint8_t)) ) {
+                uint8_t arg_dbl = strtoul( arg[1], NULL, 10);
+                set_value( (uint8_t *)rffe_vars[var_index].data, arg_dbl);
             } else {
                 printf("Unknown data type to set!\n");
             }
@@ -658,7 +661,7 @@ int main( void )
                     Data_Check();
                 }
 #endif
-                if (get_value32(Reset) == 1) {
+                if (get_value8(Reset) == 1) {
                     printf("Resetting MBED!\n");
                     mbed_reset();
                 }
