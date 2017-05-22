@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <tuple>
 
 #include "PID.h"
 #include "Drivers.h"
@@ -23,7 +24,7 @@ extern "C" {
 #define DP8_SPEED10MBPS (1 << 1)    /**< 1=10MBps speed */
 #define DP8_VALID_LINK  (1 << 0)    /**< 1=Link active */
 
-#define BUFSIZE         140
+#define BUFSIZE         256
 #define SERVER_PORT     6791
 
 // Constants
@@ -33,7 +34,8 @@ extern "C" {
 
 #define FILE_DATASIZE   127
 
-#define FW_VERSION      "V2_0005"
+#define FW_VERSION      "V1_0_0"
+#define FW_VERSION_FILE "/local/" FW_VERSION ".bin"
 
 extern "C" void mbed_reset();
 
@@ -62,30 +64,33 @@ double PID_BD_tauD[1];
 
 #define RFFE_VAR( data, rw ) { { 0, rw, sizeof(data) }, NULL, data, NULL }
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
+
 struct bsmp_var rffe_vars[] = {
-    [0]  = RFFE_VAR( Att,            READ_WRITE ), // Attenuators
-    [1]  = RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
-    [2]  = RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
-    [3]  = RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
-    [4]  = RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
-    [5]  = RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
-    [6]  = RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
-    [7]  = RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
-    [8]  = RFFE_VAR( Reset,          READ_WRITE ), // Reset
-    [9]  = RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
-    [10] = RFFE_VAR( Data,           READ_WRITE ), // Data
-    [11] = RFFE_VAR( Version,        READ_ONLY ), // Version
-    [12] = RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
-    [13] = RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
-    [14] = RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
-    [15] = RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
-    [16] = RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
-    [17] = RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
+    RFFE_VAR( Att,            READ_WRITE ), // Attenuators
+    RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
+    RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
+    RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
+    RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
+    RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
+    RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
+    RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
+    RFFE_VAR( Reset,          READ_WRITE ), // Reset
+    RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
+    RFFE_VAR( Data,           READ_WRITE ), // Data
+    RFFE_VAR( Version,        READ_ONLY ), // Version
+    RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
+    RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
+    RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
+    RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
+    RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
+    RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
 };
 
 // Create the local filesystem under the name "local"
 LocalFileSystem localdir("local");
 FILE *fp;
+
+static uint8_t v_major, v_minor, v_patch;
 
 char rffe_ip[16];
 char rffe_mac[18];
@@ -296,55 +301,60 @@ void Attenuators_Control(void const *arg)
     }
 }
 
-int check_name(char * name)
+uint32_t str2uint( char *s )
 {
-    if ((name[0] == 'V') && isdigit(name[1]) && (name[2] == '_') && isdigit(name[3]) && isdigit(name[4]) && isdigit(name[5]) && isdigit(name[6]))
-        return ((name[3]-48)*1000+(name[2]-48)*100+(name[1]-48)*10+(name[0]-48));
-    else
+    uint32_t result = 0;
+
+    if (s == 0) {
         return 0;
-}
-
-int str2int(char * str)
-{
-    return ((str[0]-48)*1000 + (str[1]-48)*100 + (str[2]-48)*10 + (str[3]-48));
-}
-
-void int2str(char * str, int num)
-{
-    str[0] = char(num/1000 + 48);
-    num = num%1000;
-    str[1] = char(num/100 + 48);
-    num = num%100;
-    str[2] = char(num/10 + 48);
-    num = num%10;
-    str[3] = num+48;
-}
-
-void Update_Software(char * old_name, char * name)
-{
-    char path[15] = "/local/";
-    if (fopen((char*)strcat(path,name),"rb") == NULL) {
-        printf("New firmare not found\n");
-        return;
     }
-    printf("Reprogramming...\n");
-    strcpy(path,"/local/");
-    remove((char*)strcat(path,old_name));
-    printf("Reseting...\n");
-    mbed_reset();
 
+    while ( (*s >= '0') && (*s <='9') ) {
+        result *= 10;
+        result += *s - '0';
+        s++;
+    }
+
+    return result;
 }
 
-#if 0
-void Data_Check( void )
+void int2str( char *s, int num )
 {
-    for (int i = 0; i < FILE_DATASIZE; i++) {
-        if ((i < (FILE_DATASIZE-4)) && Data[i] == 13 && Data[i+1] == 13 && Data[i+2] == 13 && Data[i+3] == 13)
-            break;
-        fputc(Data[i], fp);
+    short k = 0;
+    char aux[11];
+
+    if (num == 0) {
+        aux[k] = 0;
+        k++;
+    }
+
+    while (num) {
+        aux[k] = num%10;
+        num = num/10;
+        k++;
+    }
+
+    while (k>0) {
+        *s = (aux[k-1] + '0');
+        s++;
+        k--;
+    }
+
+    *s = 0;
+}
+
+bool version_str2int( char *s, uint8_t *maj, uint8_t *min, uint8_t *pat )
+{
+    if( s[0] == 'V' && isdigit(s[1]) && isdigit(s[3]) && isdigit(s[5]) ) {
+        *maj = s[1]-'0';
+        *min = s[3]-'0';
+        *pat = s[5]-'0';
+        return true;
+    } else {
+        /* Bad formatted string */
+        return false;
     }
 }
-#endif
 
 char cli_cmd[SCMD_MAX_CMD_LEN+1];
 
@@ -435,16 +445,86 @@ void CLI_Proccess( void const * args)
     }
 }
 
+int file_rename( const char *oldfname, const char *newfname, const char *prefix = NULL )
+{
+    int retval = 0;
+    int ch;
+
+    char oldf[20], newf[20];
+
+    if (prefix) {
+        strcpy(oldf, prefix);
+        strcpy(newf, prefix);
+    }
+
+    strcat(oldf, oldfname);
+    strcat(newf, newfname);
+
+    FILE *fpold = fopen(oldf, "r");   // src file
+    FILE *fpnew = fopen(newf, "w");   // dest file
+
+    while (1) {                   // Copy src to dest
+        ch = fgetc(fpold);        // until src EOF read.
+        if (ch == EOF) break;
+        fputc(ch, fpnew);
+    }
+
+    fclose(fpnew);
+    fclose(fpold);
+
+    fpnew = fopen(newf, "r"); // Reopen dest to insure
+    if(fpnew == NULL) {           // that it was created.
+        retval = (-1);            // Return Error.
+    }
+    else {
+        fclose(fpnew);
+        remove(oldf);         // Remove original file.
+        retval = (0);             // Return Success.
+    }
+    return (retval);
+}
+
+void check_fw_version( void )
+{
+    char bkp_fw_name[20], d_name_cpy[10];;
+    char *name, *ext;
+    DIR *local_d = opendir("/local");
+    struct dirent *p;
+
+    while((p = readdir(local_d)) != NULL) {
+        /* Copy string so that strtok does not change the original */
+        strcpy(d_name_cpy, p->d_name);
+        name = strtok(d_name_cpy, ".");
+        ext = strtok( NULL, ".");
+
+        if (strcmp(ext, "BIN") == 0) {
+            /* Found a binary file */
+            /* Check if the version matches this firmware */
+            if ( strcmp( name, FW_VERSION ) == 0 ) {
+                continue;
+            }
+
+            /* Found a different version binary file, rename it to *.old */
+            strcpy(bkp_fw_name, name);
+            strcat(bkp_fw_name, ".old");
+            printf("Renaming old fw from %s to %s\n", p->d_name, bkp_fw_name);
+            file_rename(p->d_name, bkp_fw_name, "/local/");
+        }
+    }
+    closedir(local_d);
+}
+
 int main( void )
 {
     //Init serial port for info printf
     pc.baud(115200);
 
-    printf("RFFE Control Firmware %s\n", FW_VERSION);
-
     bsmp_server_t *bsmp = bsmp_server_new();
     led_g=0;
     led_r=0;
+
+    /* Find firwmare version */
+    check_fw_version();
 
     // Variables initialization
     // Attenuators
@@ -487,26 +567,19 @@ int main( void )
         bsmp_register_variable( bsmp, &rffe_vars[i] );
     }
 
-    int s,numVer;
     uint8_t state = 0;
+    char new_fw_name[20];
+    char cur_fw_name[20];
+
+    strcpy( cur_fw_name, FW_VERSION );
+    strcat( cur_fw_name, ".bin");
+
+    printf("\nRFFE Firmware Version: %s\n", FW_VERSION);
 
     struct bsmp_raw_packet request;
     struct bsmp_raw_packet response;
     uint8_t buf[BUFSIZE];
     uint8_t bufresponse[BUFSIZE];
-    char path[15], old_name[15], name[15];
-
-    DIR *d = opendir("/local");
-    struct dirent *p;
-    numVer = 10000;
-    while((p = readdir(d)) != NULL) {
-        if (check_name(p->d_name) && check_name(p->d_name) < numVer) {
-            strcpy(old_name, p->d_name);
-            numVer = check_name(p->d_name);
-        }
-    }
-    //printf("old_name: %s\n",old_name);
-    closedir(d);
 
     // *************************************Threads***************************************
 
@@ -618,49 +691,55 @@ int main( void )
                     LedG = 0;
                     continue;
                 }
-#if 0
-                if (state != Reprogramming[0]) {
-                    switch (Reprogramming[0]) {
-                    case 0:
-                        if (state == 1)
-                            fclose(fp);
-                        state = Reprogramming[0];
-                        break;
 
+                if (state != get_value8(Reprogramming)) {
+                    switch (get_value8(Reprogramming)) {
                     case 1:
-                        DIR *d = opendir("/local");
-                        struct dirent *p;
-                        numVer = 10000;
-                        while((p = readdir(d)) != NULL) {
-                            if (check_name(p->d_name) && check_name(p->d_name) < numVer) {
-                                strcpy(name, p->d_name);
-                                numVer = check_name(p->d_name);
-                            }
+                        /* Read new firmware version */
+                        v_major = Data[0];
+                        v_minor = Data[1];
+                        v_patch = Data[2];
+                        /* Open new firmware file on MBED Filesystem */
+                        sprintf(new_fw_name, "/local/V%d_%d_%d.bin", v_major, v_minor, v_patch);
+                        if (strcmp(new_fw_name, FW_VERSION_FILE) != 0) {
+                            /* Only opens a new file if it has a different version */
+                            fp = fopen(new_fw_name, "w");
+                        } else {
+                            fp = NULL;
+                            printf("The new firmware version is the same as the current! Aborting upgrade operation!\n");
                         }
-                        closedir(d);
-                        strcpy(name,old_name);
-                        strcpy(path,"/local/");
-                        int2str(&name[3],(str2int(&old_name[3])%9999+1));
-                        printf("name: %s\n",name);
-                        fp = fopen((char*)strcat(path,name), "wb");
-                        state = Reprogramming[0];
+
                         break;
 
                     case 2:
-                        if (state == 1) {
+                        if (fp) {
                             fclose(fp);
+                            char cur_fw_name_old[20];
+                            strcpy(cur_fw_name_old, cur_fw_name);
+                            memcpy(&cur_fw_name_old[strlen(cur_fw_name_old)-3], "old\0", 4);
+                            /* Rename the current firmware .bin file to *.old */
+                            printf("Renaming cur fw from %s to %s\n", cur_fw_name, cur_fw_name_old );
+                            file_rename( cur_fw_name, cur_fw_name_old, "/local/" );
+                            printf("Resetting...\n");
+                            mbed_reset();
                         }
-                        state = Reprogramming[0];
-                        Update_Software(old_name, name);
                         break;
 
+                    default:
+                        break;
+                    }
+                    state = get_value8(Reprogramming);
+                }
+
+                if (get_value8(Reprogramming) == 1 && buf[0] == 0x20 && buf[3] == 0x0A ) {
+                    /* A full firmware page was sent, copy data to file */
+                    for (int i = 0; i < FILE_DATASIZE; i++) {
+                        if (fp) {
+                            fputc(Data[i], fp);
+                        }
                     }
                 }
 
-                if ((Reprogramming[0] == 1) && (buf[0] == 0x20) && (buf[3] == DataID)) {
-                    Data_Check();
-                }
-#endif
                 if (get_value8(Reset) == 1) {
                     printf("Resetting MBED!\n");
                     mbed_reset();
