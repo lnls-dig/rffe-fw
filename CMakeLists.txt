@@ -48,6 +48,8 @@ include(mbed.cmake)
 set(PROJ_SRCS main.cpp pcbnAPI.cpp cli.cpp)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no-wchar-size-warning")
+
 add_subdirectory(PID)
 add_subdirectory(Drivers)
 add_subdirectory(bsmp)
