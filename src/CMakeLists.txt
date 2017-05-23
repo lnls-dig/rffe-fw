@@ -4,6 +4,7 @@ set(PROJ_SRCS
   ${PROJ_PATH}/main.cpp
   ${PROJ_PATH}/cli.cpp
   ${PROJ_PATH}/pcbnAPI.cpp
+  ${PROJ_PATH}/util.cpp
   )
 
 set(PROJ_HDRS
