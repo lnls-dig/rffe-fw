@@ -44,15 +44,10 @@ endif()
 
 include(mbed.cmake)
 
-#Add all project sources to be compiled
-set(PROJ_SRCS main.cpp pcbnAPI.cpp cli.cpp)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no-wchar-size-warning")
 
-add_subdirectory(PID)
-add_subdirectory(Drivers)
-add_subdirectory(bsmp)
+#Add all project sources to be compiled
+add_subdirectory(src)
 
 include_directories(${PROJ_HDRS})
 add_executable(${CMAKE_PROJECT_NAME} ${PROJ_SRCS} ${MBED_OBJECTS})
