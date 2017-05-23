@@ -1,16 +1,9 @@
-#include "pcbnAPI.h"
 #include "mbed.h"
 #include "rtos.h"
 #include "EthernetInterface.h"
-#include "USBHostSerial.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <tuple>
 
 #include "PID.h"
+#include "pcbnAPI.h"
 #include "Drivers.h"
 #include "cli.h"
 #include "util.h"
@@ -20,7 +13,6 @@ extern "C" {
 #include "server.h"
 #include <bsmp/server.h>
 }
-
 
 #define DP8_SPEED10MBPS (1 << 1)    /**< 1=10MBps speed */
 #define DP8_VALID_LINK  (1 << 0)    /**< 1=Link active */
