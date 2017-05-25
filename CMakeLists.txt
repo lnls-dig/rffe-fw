@@ -15,7 +15,6 @@ set(MBED_TARGET LPC1768 CACHE STRING "MBED Target CPU")
 
 set(USE_RTOS true CACHE BOOL "Compile MBED-RTOS lib")
 set(USE_NET true CACHE BOOL "Compile EthernetInterface lib")
-set(USE_USBHOST true CACHE BOOL "Compile USBHost lib")
 
 if(USE_NET)
   if(NOT USE_DHCP AND NOT USE_FIXIP)
