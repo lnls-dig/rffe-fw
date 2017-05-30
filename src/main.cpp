@@ -51,6 +51,8 @@ double PID_AC_tauD[1];
 double PID_BD_Kc[1];
 double PID_BD_tauI[1];
 double PID_BD_tauD[1];
+char IP_Addr[16];
+char MAC_Addr[18];
 
 #define READ_ONLY  0
 #define READ_WRITE 1
@@ -77,6 +79,8 @@ struct bsmp_var rffe_vars[] = {
     RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
     RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
     RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
+    RFFE_VAR( IP_Addr,        READ_ONLY ), // Ip Address
+    RFFE_VAR( MAC_Addr,       READ_ONLY ), // MAC Address
 };
 
 // Create the local filesystem under the name "local"
@@ -84,9 +88,6 @@ LocalFileSystem localdir("local");
 FILE *fp;
 
 static uint8_t v_major, v_minor, v_patch;
-
-char rffe_ip[16];
-char rffe_mac[18];
 
 // Hardware Initialization - MBED
 
@@ -310,8 +311,6 @@ void CLI_Proccess( void const * args)
 
         if (strcmp( cmd, "dump" ) == 0) {
             printf("RFFE Vars dump:\n");
-            printf("\tIP-Address: %s\n", rffe_ip);
-            printf("\tMAC-Address: %s\n", rffe_mac);
             printf("\t[0]  Att: %f\n", get_value64(Att));
             printf("\t[1]  Temperature AC: %f\n", get_value64(TempAC));
             printf("\t[2]  Temperature BD: %f\n", get_value64(TempBD));
@@ -330,6 +329,9 @@ void CLI_Proccess( void const * args)
             printf("\t[15] PID_BD_Kc: %f\n", get_value64(PID_BD_Kc));
             printf("\t[16] PID_BD_tauI: %f\n", get_value64(PID_BD_tauI));
             printf("\t[17] PID_BD_tauD: %f\n", get_value64(PID_BD_tauD));
+            printf("\t[18] IP-Address: %s\n", IP_Addr);
+            printf("\t[19] MAC-Address: %s\n", MAC_Addr);
+
             printf("\n");
         } else if (strcmp( cmd, "set" ) == 0) {
             if ((arg[0] == NULL) || (arg[1] == NULL)) {
@@ -502,11 +504,11 @@ int main( void )
         }
         printf("Success! RFFE eth server is up!\n");
 
-        strncpy(rffe_ip, eth.getIPAddress(), sizeof(rffe_ip));
-        strncpy(rffe_mac, eth.getMACAddress(), sizeof(rffe_mac));
+        strncpy(IP_Addr, eth.getIPAddress(), sizeof(IP_Addr));
+        strncpy(MAC_Addr, eth.getMACAddress(), sizeof(MAC_Addr));
 
-        printf("RFFE IP: %s\n", rffe_ip);
-        printf("RFFE MAC Address: %s\n", rffe_mac);
+        printf("RFFE IP: %s\n", IP_Addr);
+        printf("RFFE MAC Address: %s\n", MAC_Addr);
         printf("Listening on port %d...\n", SERVER_PORT);
 
         server.bind(SERVER_PORT);
