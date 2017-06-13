@@ -530,6 +530,10 @@ int main( void )
                 /* Wait to receive data from client */
                 recv_sz = client.receive_all((char*)buf, 3);
 
+                if (recv_sz < 0) {
+                    break;
+                }
+
                 if (recv_sz == 3) {
                     /* We received a complete message header */
                     uint16_t payload_len = (buf[1] << 8) | buf[2];
