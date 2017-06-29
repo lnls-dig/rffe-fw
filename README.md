@@ -12,7 +12,7 @@ The following packages must be installed on your system in order to compile the 
 **gcc-arm-none-eabi** can be installed from the pre-compiled files found at: https://launchpad.net/gcc-arm-embedded/+download
 or you can run the following command under Ubuntu:
 
-    sudo apt-get install gcc-arm-none-eabi
+	sudo apt-get install gcc-arm-none-eabi
 
 Next step is to clone this repository into your workspace. Since we're using the mbed libraries as a submodule, you **MUST** run the git clone command with the `--recursive` option.
 
@@ -27,14 +27,21 @@ If you've already cloned the repository without the recursive option, go to the 
 
 Go to the repository folder
 
-    cd /path/to/repo/
+	cd /path/to/repo/
 
-If this is the first time compiling this firmware, run CMake configuration scripts
+Create a new folder wherever is suitable
 
-	cmake .
+	cd <build_folder>
 
-You can set several options (Board IP, DHCP Mode, Mount path, libs to compile, etc) in `CMakeCache.txt` file using your text editor or a GUI editor for CMake (`cmake-gui`).
-After changing the desired options, run the CMake configuration command again (the CMakeCache file will not be edited by this command) and compile the firmware:
+Run CMake using the path to the repository folder as an direct argument and the flags configure the compilation scripts to your specific build. It's possible to set several options like Board IP, DHCP Mode, Mount path, libs to compile, etc in `CMakeCache.txt` file using your text editor, passing the options via `-D<option>=<value>` or a GUI editor for CMake (`cmake-gui`).
+
+        cmake <path_to_source> -D<option1>=<value1> -D<option2>=<value2> ...
+
+Example:
+
+	cmake ../ -DUSE_FIXIP=true -DMBED_IP=10.2.119.203 -DMBED_MASK=10.2.119.255 -DMBED_GATEWAY=10.2.119.1
+
+After changing the desired options, run the CMake configuration command again, if `CMakeCache.txt` was changed, and compile the firmware:
 
 	make -s
 
@@ -44,9 +51,10 @@ Both a `.axf` file and a `.bin` file will be generated in the source folder. You
 
 To clean the compilation files (binaries, objects and dependence files), just run
 
-    make clean
+	make clean
 
 ## Programming
+
 To program the firmware in the MBED board, just plug in a USB cable in its frontal jack in your computer and a `MBED` drive will be mounted (the MBED will get its power from the USB +5v).
 
 Copy the generated binary file before into the MBED storage and reset the board (Power Cycle or Reset button).
