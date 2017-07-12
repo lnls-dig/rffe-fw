@@ -18,3 +18,4 @@
 *.axf
 *.bin
 *.map
+BUILD/*
