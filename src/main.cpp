@@ -1,6 +1,10 @@
+/** MBED headers */
 #include "mbed.h"
 #include "rtos.h"
 #include "EthernetInterface.h"
+#include "TCPServer.h"
+#include "TCPSocket.h"
+#include "lpc_phy.h"
 
 #include "PID.h"
 #include "pcbnAPI.h"
@@ -8,8 +12,9 @@
 #include "cli.h"
 #include "util.h"
 
-#include "lpc_phy.h"
+/** BSMP headers */
 extern "C" {
+#include "server_priv.h"
 #include "server.h"
 #include <bsmp/server.h>
 }
@@ -20,16 +25,18 @@ extern "C" {
 #define BUFSIZE         256
 #define SERVER_PORT     6791
 
-// Constants
+/* PID Constants */
 #define PID_RATE        1.0
 #define PID_OUTMAX      3.3
 #define PID_OUTMIN      0.0
 
 #define FILE_DATASIZE   127
 
-#define FW_VERSION      "V1_0_0"
+/* Firmware version macros */
+#define FW_VERSION      "V2_0_1"
 #define FW_VERSION_FILE "/local/" FW_VERSION ".bin"
 
+/* MBED Reset function */
 extern "C" void mbed_reset();
 
 // BSMP Variables arrays
@@ -51,8 +58,6 @@ double PID_AC_tauD[1];
 double PID_BD_Kc[1];
 double PID_BD_tauI[1];
 double PID_BD_tauD[1];
-char IP_Addr[16];
-char MAC_Addr[18];
 
 #define READ_ONLY  0
 #define READ_WRITE 1
@@ -79,15 +84,24 @@ struct bsmp_var rffe_vars[] = {
     RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
     RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
     RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
-    RFFE_VAR( IP_Addr,        READ_ONLY ), // Ip Address
-    RFFE_VAR( MAC_Addr,       READ_ONLY ), // MAC Address
 };
 
 // Create the local filesystem under the name "local"
 LocalFileSystem localdir("local");
 FILE *fp;
 
+/* BSMP server */
+bsmp_server_t *bsmp;
+
 static uint8_t v_major, v_minor, v_patch;
+
+char rffe_ip[16];
+char rffe_mac[18];
+
+// Threads
+Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
+Thread Attenuators_thread(osPriorityNormal, 800, NULL, "ATT");
+Thread CLI_Proccess_Thread(osPriorityNormal, 800, NULL, "CLI");
 
 // Hardware Initialization - MBED
 
@@ -98,7 +112,6 @@ DigitalOut led3(LED3);
 DigitalOut led4(LED4);
 
 // MBED pins
-
 DigitalOut dataC(p10); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut dataA(p11); // Data line to attenuator. LVTTL, low = reset, init = low.Set first attenuators (Att)
 DigitalOut clk(p12); // Digital control attenuation. LVTTL, low = reset, init = low.Digital control attenuation
@@ -121,32 +134,35 @@ bool get_eth_link_status(void)
     return (lpc_mii_read_data() & DP8_VALID_LINK) ? true : false;
 }
 
-//********************************************** Thread functions **********************************************************
-void Temp_Feedback_Control(void const *args)
+void Temp_Feedback_Control( void )
 {
-    // Init. config
-    double SetP_AC, SetP_BD;
-    double ProcessValueAC, ProcessValueBD;
-    double voutAC, voutBD;
-
-    int state = 2;
-    int pid_state = MANUAL;
-
     /* Temperature Sensors */
     ADT7320 AC_Temp_sensor( spi1, CSac, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
     ADT7320 BD_Temp_sensor( spi1, CSbd, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
 
+    /* Heater DAC output */
     DAC7554 AC_Heater_DAC( spi1, CS_dac, DAC_AC_SEL, 3.3 );
     DAC7554 BD_Heater_DAC( spi1, CS_dac, DAC_BD_SEL, 3.3 );
 
-    /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
+    /* Temperature PIDs */
+    double SetP_AC, SetP_BD;
+    double ProcessValueAC, ProcessValueBD;
+    double voutAC, voutBD;
+
     PID pidAC( &ProcessValueAC, &voutAC, &SetP_AC, get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD), DIRECT );
+    PID pidBD( &ProcessValueBD, &voutBD, &SetP_BD, get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD), DIRECT );
+
+    int state = 2;
+    int pid_state = MANUAL;
+
+    printf("Initializing Temp Control thread\n");
+
+    /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
     pidAC.SetSampleTime( PID_RATE*1000 );
     //pidAC.SetInputLimits( 0.0 , 100.0 );
     pidAC.SetOutputLimits( PID_OUTMIN , PID_OUTMAX );
     pidAC.SetMode( pid_state ); // Start with the automatic control disabled
 
-    PID pidBD( &ProcessValueBD, &voutBD, &SetP_BD, get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD), DIRECT );
     pidBD.SetSampleTime( PID_RATE*1000 );
     //pidBD.SetInputLimits( 0.0 , 100.0 );
     pidBD.SetOutputLimits( PID_OUTMIN, PID_OUTMAX );
@@ -155,16 +171,15 @@ void Temp_Feedback_Control(void const *args)
     SHDN_temp = 1;
 
     while (1) {
-
         if (state != get_value8(Temp_Control)) {
-            printf ("New temp_control state : %s\n", get_value8(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            printf ("Temperature control in %s mode!\n", (get_value8(Temp_Control) == AUTOMATIC) ? "AUTOMATIC":"MANUAL");
             state = get_value8(Temp_Control);
 
             pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
-        }
 
-        pidAC.SetMode( pid_state );
-        pidBD.SetMode( pid_state );
+            pidAC.SetMode( pid_state );
+            pidBD.SetMode( pid_state );
+        }
 
         // Read temp from ADT7320 in RFFEs
         set_value(TempAC,AC_Temp_sensor.Read());
@@ -228,23 +243,26 @@ void Temp_Feedback_Control(void const *args)
 #ifdef DEBUG_PRINTF
         printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
 #endif
-        Thread::wait(int(1000*PID_RATE));
+        Thread::wait(100);
     }
 }
 
-void Clk_att(void const *arg)
+static void Clk_att( void const *arg )
 {
     clk = !clk;
 }
 
-void Attenuators_Control(void const *arg)
+RtosTimer Clock_thread(Clk_att, osTimerPeriodic, (void *) NULL);
+
+void Attenuators_Control( void )
 {
-    double prev_att1 = get_value64(Att)+1;
+    double prev_att1 = 0;
     bool attVec1[6];
-    RtosTimer Clock_thread(Clk_att);
+
+
+    printf("Initializing Attenuators thread\n");
 
     while (1) {
-
         // Attenuators set
         if ( prev_att1 != get_value64(Att) ) {
             // Checking and setting attenuators value to fisable values
@@ -274,33 +292,30 @@ void Attenuators_Control(void const *arg)
             LE = 0;
             Clock_thread.stop();
         }
-        Thread::wait(1000);
+        Thread::wait(100);
     }
 }
 
-
 char cli_cmd[SCMD_MAX_CMD_LEN+1];
 
-void commandCallback(char *cmdIn, void *extraContext) {
+void commandCallback(char *cmdIn, void *extraContext)
+{
     // all our commands will be recieved async in commandCallback
     // we don't want to do time consuming things since it could
     // block the reader and allow the uart to overflow so we simply
     // copy it out in the callback and then process it latter.
-
-#ifdef DEBUG_PRINTF
-    printf("CLI Command Received =%s\r\n", cli_cmd);
-#endif
     strcpy(cli_cmd, cmdIn);
 
-    Thread *CLI_Thread = static_cast<Thread *>(extraContext);
-    CLI_Thread->signal_set(0x01);
+    CLI_Proccess_Thread.signal_set(0x01);
 }
 
-void CLI_Proccess( void const * args)
+void CLI_Proccess( void )
 {
     char *cmd, *save_ptr;
     char *arg[2];
+
     printf("Initializing CLI_Proccess thread\n");
+
     for( ; ; ) {
         Thread::signal_wait(0x01);
         cmd = strtok_r( cli_cmd, " ", &save_ptr);
@@ -311,6 +326,8 @@ void CLI_Proccess( void const * args)
 
         if (strcmp( cmd, "dump" ) == 0) {
             printf("RFFE Vars dump:\n");
+            printf("\tIP-Address: %s\n", rffe_ip);
+            printf("\tMAC-Address: %s\n", rffe_mac);
             printf("\t[0]  Att: %f\n", get_value64(Att));
             printf("\t[1]  Temperature AC: %f\n", get_value64(TempAC));
             printf("\t[2]  Temperature BD: %f\n", get_value64(TempBD));
@@ -329,9 +346,6 @@ void CLI_Proccess( void const * args)
             printf("\t[15] PID_BD_Kc: %f\n", get_value64(PID_BD_Kc));
             printf("\t[16] PID_BD_tauI: %f\n", get_value64(PID_BD_tauI));
             printf("\t[17] PID_BD_tauD: %f\n", get_value64(PID_BD_tauD));
-            printf("\t[18] IP-Address: %s\n", IP_Addr);
-            printf("\t[19] MAC-Address: %s\n", MAC_Addr);
-
             printf("\n");
         } else if (strcmp( cmd, "set" ) == 0) {
             if ((arg[0] == NULL) || (arg[1] == NULL)) {
@@ -399,12 +413,21 @@ void check_fw_version( void )
     closedir(local_d);
 }
 
+static void EthLED_callback( void const *arg )
+{
+    LedG = 0;
+}
+
+RtosTimer EthLED_timer(EthLED_callback, osTimerOnce, (void *) NULL);
+
 int main( void )
 {
     //Init serial port for info printf
     pc.baud(115200);
 
-    bsmp_server_t *bsmp = bsmp_server_new();
+    bsmp = bsmp_server_new();
+    MBED_ASSERT(bsmp);
+
     led_g=0;
     led_r=0;
 
@@ -452,6 +475,14 @@ int main( void )
         bsmp_register_variable( bsmp, &rffe_vars[i] );
     }
 
+    // *************************************Threads***************************************
+    Attenuators_thread.start(Attenuators_Control);
+    Temp_Control_thread.start(Temp_Feedback_Control);
+    CLI_Proccess_Thread.start(CLI_Proccess);
+
+    // Instantiate our command processor for the  USB serial line.
+    scMake(&pc, commandCallback, NULL);
+
     uint8_t state = 0;
     char new_fw_name[20];
     char cur_fw_name[20];
@@ -466,52 +497,42 @@ int main( void )
     uint8_t buf[BUFSIZE];
     uint8_t bufresponse[BUFSIZE];
 
-    // *************************************Threads***************************************
-
-    Thread Attenuators_thread(Attenuators_Control);
-    printf("Initializing Attenuators thread\n");
-
-    Thread Temp_Control_thread(Temp_Feedback_Control);
-    printf("Initializing Temp Control thread\n");
-
-    Thread CLI_Proccess_Thread(CLI_Proccess);
-
-    // Instantiate our command processor for the  USB serial line.
-    scMake(&pc, commandCallback, &CLI_Proccess_Thread);
-
     // Ethernet initialization
-    EthernetInterface eth;
-    TCPSocketConnection client;
-    TCPSocketServer server;
+    EthernetInterface net;
+    TCPSocket client;
+    SocketAddress client_addr;
+    TCPServer server;
+
     int recv_sz, sent_sz;
 
 #if defined(ETH_DHCP)
-    eth.init(); //Use DHCP
+    net.set_dhcp(true);
 #else
 #if defined(ETH_FIXIP)
-    eth.init(ETH_IP,ETH_MASK,ETH_GATEWAY); //Use given parameters for static IP
+    net.set_network(ETH_IP,ETH_MASK,ETH_GATEWAY);
 #else
 #error "No Ethernet addressing mode selected! Please choose between DHCP or Fixed IP!"
 #endif
 #endif
 
     LedY = 0;
-
     while (true) {
-        printf("Trying to bring up ethernet connection... ");
-        while (eth.connect(5000) != 0) {
-            printf("Attempt failed. Trying again... \n");
+        printf("Trying to bring up ethernet connection...\n");
+        while (net.connect() != 0) {
+            printf("Attempt failed. Trying again in 0.5s... \n");
+            Thread::wait(500);
         }
         printf("Success! RFFE eth server is up!\n");
 
-        strncpy(IP_Addr, eth.getIPAddress(), sizeof(IP_Addr));
-        strncpy(MAC_Addr, eth.getMACAddress(), sizeof(MAC_Addr));
+        strncpy(rffe_ip, net.get_ip_address(), sizeof(rffe_ip));
+        strncpy(rffe_mac, net.get_mac_address(), sizeof(rffe_mac));
 
-        printf("RFFE IP: %s\n", IP_Addr);
-        printf("RFFE MAC Address: %s\n", MAC_Addr);
+        printf("RFFE IP: %s\n", rffe_ip);
+        printf("RFFE MAC Address: %s\n", rffe_mac);
         printf("Listening on port %d...\n", SERVER_PORT);
 
-        server.bind(SERVER_PORT);
+        server.open(&net);
+        server.bind(net.get_ip_address(), SERVER_PORT);
         server.listen();
 
         /* Turn the conection indicator LED on */
@@ -520,19 +541,15 @@ int main( void )
         while (true) {
             printf(" Waiting for new client connection...\n");
 
-            server.accept(client);
+            server.accept(&client, &client_addr);
             client.set_blocking(1500);
 
-            printf("Connection from client: %s\n", client.get_address());
+            printf("Connection from client: %s\n", client_addr.get_ip_address());
 
-            while (client.is_connected() && get_eth_link_status()) {
+            while ( get_eth_link_status() ) {
 
                 /* Wait to receive data from client */
-                recv_sz = client.receive_all((char*)buf, 3);
-
-                if (recv_sz < 0) {
-                    break;
-                }
+                recv_sz = client.recv((char*)buf, 3);
 
                 if (recv_sz == 3) {
                     /* We received a complete message header */
@@ -541,14 +558,18 @@ int main( void )
                      * fixes #9 github issue, in that we end up stuck here
                      * waiting for more bytes that never comes */
                     if (payload_len > 0) {
-                        recv_sz += client.receive_all( (char*) &buf[3], payload_len );
+                        recv_sz += client.recv( (char*) &buf[3], payload_len );
                     }
+                } else if (recv_sz <= 0) {
+                    /* Special case for disconnections - just discard the socket and await a new connection */
+                    break;
                 } else {
-                    printf( "Received malformed message header of size: %d , discarding...", recv_sz );
+                    printf("Received malformed message header of size: %d , discarding...", recv_sz );
                     continue;
                 }
                 /* Pulse activity LED */
                 LedG = 1;
+                EthLED_timer.start(25);
 
 
 #ifdef DEBUG_PRINTF
@@ -558,7 +579,6 @@ int main( void )
                 }
                 printf("\n");
 #endif
-
                 request.data = buf;
                 request.len = recv_sz;
 
@@ -566,7 +586,8 @@ int main( void )
 
                 bsmp_process_packet(bsmp, &request, &response);
 
-                sent_sz = client.send_all((char*)response.data, response.len);
+                sent_sz = client.send((char*)response.data, response.len);
+
 #ifdef DEBUG_PRINTF
                 printf("Sending message of %d bytes: ", sent_sz);
                 for (int i = 0; i < sent_sz; i++) {
@@ -576,8 +597,7 @@ int main( void )
 #endif
 
                 if (sent_sz <= 0) {
-                    printf("ERROR while writing to socket!");
-                    LedG = 0;
+                    printf("ERROR while writing to socket!\n");
                     continue;
                 }
 
@@ -633,19 +653,15 @@ int main( void )
                     printf("Resetting MBED!\n");
                     mbed_reset();
                 }
-
-                LedG = 0;
             }
 
             client.close();
-
             printf("Client Disconnected!\n");
-            LedG = 0;
 
             if (get_eth_link_status() == 0) {
                 /* Eth link is down, clean-up server connection */
                 server.close();
-                eth.disconnect();
+                net.disconnect();
                 LedY = 0;
                 break;
             }
