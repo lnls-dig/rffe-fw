@@ -39,7 +39,7 @@ VPATH = ..
 ###############################################################################
 # Project settings
 
-PROJECT := rffe-new
+PROJECT := rffe-fw
 
 
 # Project settings
