@@ -338,6 +338,7 @@ OBJECTS += ./mbed-os/targets/TARGET_NXP/TARGET_LPC176X/sleep.o
 OBJECTS += ./mbed-os/targets/TARGET_NXP/TARGET_LPC176X/spi_api.o
 OBJECTS += ./mbed-os/targets/TARGET_NXP/TARGET_LPC176X/us_ticker.o
 OBJECTS += ./src/Drivers/ADT7320.o
+OBJECTS += ./src/Drivers/LM71.o
 OBJECTS += ./src/Drivers/DAC7554.o
 OBJECTS += ./src/PID/PID.o
 OBJECTS += ./src/bsmp/bsmp.o
@@ -545,10 +546,25 @@ CXX_FLAGS += -DDEVICE_LOCALFILESYSTEM=1
 CXX_FLAGS += -include
 CXX_FLAGS += mbed_config.h
 
+
+#Default temperature sensor is LM71
+ifndef TEMP_SENSOR
+TEMP_SENSOR=LM71
+endif
+
+ifeq ($(TEMP_SENSOR),LM71)
+CXX_FLAGS += -DTEMP_SENSOR_LM71
+else
+ifeq ($(TEMP_SENSOR),ADT7320)
+CXX_FLAGS += -DTEMP_SENSOR_ADT7320
+endif
+endif
+
 #Default ethernet interface is DHCP
 ifndef ETH_INTERFACE
 ETH_INTERFACE=DHCP
 endif
+
 ifeq ($(ETH_INTERFACE),FIX_IP)
 ifndef IP
 $(error IP is not set)

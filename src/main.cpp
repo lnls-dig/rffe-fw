@@ -137,8 +137,15 @@ bool get_eth_link_status(void)
 void Temp_Feedback_Control( void )
 {
     /* Temperature Sensors */
+#if defined(TEMP_SENSOR_LM71)
+    LM71 AC_Temp_sensor( spi1, CSac, 1000000, LM71_MODE_CONVERSION, 0.0, 100.0 );
+    LM71 BD_Temp_sensor( spi1, CSbd, 1000000, LM71_MODE_CONVERSION, 0.0, 100.0 );
+#elif defined(TEMP_SENSOR_ADT7320)
     ADT7320 AC_Temp_sensor( spi1, CSac, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
     ADT7320 BD_Temp_sensor( spi1, CSbd, 1000000, ADT7320_CFG_16_BITS, 0, 0.0, 100.0 );
+#else
+#error "No temperature sensor selected. Define it with the macros 'TEMP_SENSOR_LM71' or 'TEMP_SENSOR_ADT7320'"
+#endif
 
     /* Heater DAC output */
     DAC7554 AC_Heater_DAC( spi1, CS_dac, DAC_AC_SEL, 3.3 );
@@ -181,7 +188,7 @@ void Temp_Feedback_Control( void )
             pidBD.SetMode( pid_state );
         }
 
-        // Read temp from ADT7320 in RFFEs
+        // Read values from RFFE's temperature sensors
         set_value(TempAC,AC_Temp_sensor.Read());
         set_value(TempBD,BD_Temp_sensor.Read());
 
