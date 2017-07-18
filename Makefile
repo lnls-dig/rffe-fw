@@ -550,6 +550,7 @@ CXX_FLAGS += mbed_config.h
 #Default temperature sensor is LM71
 ifndef TEMP_SENSOR
 TEMP_SENSOR=LM71
+$(warning TEMP_SENSOR not explicitly defined! Using default option: $(TEMP_SENSOR) )
 endif
 
 ifeq ($(TEMP_SENSOR),LM71)
@@ -563,6 +564,7 @@ endif
 #Default ethernet interface is DHCP
 ifndef ETH_INTERFACE
 ETH_INTERFACE=DHCP
+$(warning ETH_INTERFACE not explicitly defined! Using default option: $(ETH_INTERFACE) )
 endif
 
 ifeq ($(ETH_INTERFACE),FIX_IP)
