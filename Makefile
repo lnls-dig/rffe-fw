@@ -592,7 +592,7 @@ ASM_FLAGS += -D__CORTEX_M3
 ASM_FLAGS += -DARM_MATH_CM3
 
 
-LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_malloc_r -Wl,--wrap,_free_r -Wl,--wrap,_realloc_r -Wl,--wrap,_memalign_r -Wl,--wrap,_calloc_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(PROJECT).map 
+LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_malloc_r -Wl,--wrap,_free_r -Wl,--wrap,_realloc_r -Wl,--wrap,_memalign_r -Wl,--wrap,_calloc_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(PROJECT).map
 LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--end-group
 
 # Tools and Flags
@@ -636,14 +636,14 @@ $(PROJECT).link_script.ld: $(LINKER_SCRIPT)
 
 
 
-$(PROJECT).elf: $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld 
+$(PROJECT).elf: $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld
 	+@echo "link: $(notdir $@)"
 	@$(LD) $(LD_FLAGS) -T $(filter %.ld, $^) $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
 
 
 $(PROJECT).bin: $(PROJECT).elf
 	$(ELF2BIN) -O binary $< $@
-	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ =====" 
+	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ ====="
 
 $(PROJECT).hex: $(PROJECT).elf
 	$(ELF2BIN) -O ihex $< $@
