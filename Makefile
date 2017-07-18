@@ -545,6 +545,10 @@ CXX_FLAGS += -DDEVICE_LOCALFILESYSTEM=1
 CXX_FLAGS += -include
 CXX_FLAGS += mbed_config.h
 
+#Default ethernet interface is DHCP
+ifndef ETH_INTERFACE
+ETH_INTERFACE=DHCP
+endif
 ifeq ($(ETH_INTERFACE),FIX_IP)
 ifndef IP
 $(error IP is not set)
