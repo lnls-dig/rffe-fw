@@ -23,7 +23,7 @@ BINOPS_FUNC(or, |=)
 BINOPS_FUNC(xor, ^=)
 BINOPS_FUNC(clear, &=~)
 
-bin_op_function bin_op[256] =
+bin_op_function bin_op[] =
 {
     ['A'] = binops_and,    // AND
     ['X'] = binops_xor,    // XOR

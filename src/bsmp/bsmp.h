@@ -12,7 +12,7 @@
 #define BSMP_MAX_PAYLOAD            65535
 #define BSMP_MAX_MESSAGE            (BSMP_HEADER_SIZE+BSMP_MAX_PAYLOAD)
 
-#define BSMP_MAX_VARIABLES          128
+#define BSMP_MAX_VARIABLES          30
 #define BSMP_MAX_GROUPS             8
 #define BSMP_MAX_CURVES             128
 #define BSMP_MAX_FUNCTIONS          128
@@ -54,7 +54,7 @@ enum bsmp_bin_op
 };
 
 typedef void (*bin_op_function) (uint8_t *data, uint8_t *mask, uint8_t size);
-extern bin_op_function bin_op[256];
+extern bin_op_function bin_op[];
 
 /* Error codes */
 
