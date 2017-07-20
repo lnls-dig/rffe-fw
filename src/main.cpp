@@ -102,7 +102,7 @@ static uint8_t v_major, v_minor, v_patch;
 // Threads
 Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
 Thread Attenuators_thread(osPriorityNormal, 800, NULL, "ATT");
-Thread CLI_Proccess_Thread(osPriorityNormal, 800, NULL, "CLI");
+Thread CLI_Proccess_Thread(osPriorityNormal, 1024, NULL, "CLI");
 
 // Hardware Initialization - MBED
 
