@@ -532,8 +532,8 @@ int main( void )
         }
         printf("Success! RFFE eth server is up!\n");
 
-        strncpy(IP_Addr, eth.getIPAddress(), sizeof(IP_Addr));
-        strncpy(MAC_Addr, eth.getMACAddress(), sizeof(MAC_Addr));
+        strncpy(IP_Addr, net.get_ip_address(), sizeof(IP_Addr));
+        strncpy(MAC_Addr, net.get_mac_address(), sizeof(MAC_Addr));
         printf("RFFE IP: %s\n", IP_Addr);
         printf("RFFE MAC Address: %s\n", MAC_Addr);
 
