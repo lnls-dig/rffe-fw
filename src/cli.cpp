@@ -81,14 +81,14 @@ int sc_listener_ndx(struct SCMD *wrk) {
 // callback extra is a extra pointer to allow recievers
 // to rebuild state as needed.  They are expected
 // to cast it to something useful
-struct SCMD *scMake(Serial *sio, void (*callback)(char *, void *), void *callbackExtra) {
+struct SCMD *scMake(RawSerial *sio, void (*callback)(char *, void *), void *callbackExtra) {
     struct SCMD *sc = (struct SCMD *)  malloc(sizeof(struct SCMD));
     sc->sio = sio;
     memset(sc->buff,SCMD_MAX_CMD_LEN+1,0);
     sc->callback = callback;
     sc->callbackExtra = callbackExtra;
     sc_add_listener(sc);
-    sc->sio->attach(&sc_rx_interrupt, Serial::RxIrq);
+    sc->sio->attach(&sc_rx_interrupt, RawSerial::RxIrq);
     return sc;
 }
 

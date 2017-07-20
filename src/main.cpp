@@ -127,7 +127,7 @@ DigitalOut dataD(p27); // Data line to attenuator. LVTTL, low = reset, init = lo
 DigitalOut CS_dac(p16); // Chip select for DAC. LVTTL, low = Selected, init = high.Chip select
 DigitalOut LedY(p29); // Yellow led of the Ethernet connector. LVTTLIndicate active connection
 DigitalOut LedG(p30); // Green led of the Ethernet connector. LVTTLIndicate transmiting data
-Serial pc(USBTX, USBRX); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
+RawSerial pc(USBTX, USBRX); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
 SPI spi1(p5,p6,p7); //SPI Interface - spi(mosi, miso, sclk)
 
 bool get_eth_link_status(void)

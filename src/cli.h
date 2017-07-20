@@ -144,7 +144,7 @@
 #define SCMD_LISTENER_NOT_FOUND -1
 
 struct SCMD {
-    Serial *sio;
+    RawSerial *sio;
     char buff[SCMD_MAX_CMD_LEN+1];
     short in_ndx;
     char last_char;
@@ -178,7 +178,7 @@ int sc_listener_ndx(struct SCMD *wrk);
 // callback extra is a extra pointer to allow recievers
 // to rebuild state as needed.  They are expected
 // to cast it to something useful
-struct SCMD *scMake(Serial *sio, void (*callback)(char *, void *), void *callbackExtra);
+struct SCMD *scMake(RawSerial *sio, void (*callback)(char *, void *), void *callbackExtra);
 
 // process any inbound characters available
 // in the uart buffer for the Serial device
