@@ -331,7 +331,7 @@ void CLI_Proccess( void )
         for ( uint8_t i = 0; i < sizeof(arg)/sizeof(arg[0]); i++) {
             arg[i] = strtok_r( NULL, " ", &save_ptr);
         }
-
+        printf("\r\n");
         if (strcmp( cmd, "dump" ) == 0) {
             printf("RFFE Vars dump:\n");
             printf("\t[0]  Att: %f\n", get_value64(Att));
