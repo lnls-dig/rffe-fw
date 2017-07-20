@@ -139,7 +139,7 @@
 #include "mbed.h"
 
 #define SCMD_MAX_LISTENERS 1
-#define SCMD_MAX_CMD_LEN 25
+#define SCMD_MAX_CMD_LEN 30
 #define SCMD_TOO_MANY_LISTENER -2
 #define SCMD_LISTENER_NOT_FOUND -1
 
