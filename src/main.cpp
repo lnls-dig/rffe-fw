@@ -366,6 +366,13 @@ void CLI_Proccess( void )
                 printf("The requested variable is READ_ONLY!\n");
                 continue;
             }
+
+            /* Special case for reset */
+            if (var_index == 8) {
+                printf("Resetting MBED...\n");
+                mbed_reset();
+            }
+
             if (rffe_vars[var_index].info.size == sizeof(int)){
                 int arg_int = strtol( arg[1], NULL, 10);
                 set_value( (int *)rffe_vars[var_index].data, arg_int);
