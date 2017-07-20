@@ -101,9 +101,10 @@ struct SCMD *scMake(RawSerial *sio, void (*callback)(char *, void *), void *call
 void sc_rx_process(struct SCMD *wrk) {
     // Loop just in case more than one character is in UART's receive FIFO buffer
     // Stop if buffer full
+
     while ((wrk->sio->readable())) {
         char cin = wrk->sio->getc();
-        //printf("cin=%d\r\n", (int) cin);
+        wrk->sio->putc(cin);
         if ((cin == 10) || (cin == 13)) { // found CR or LF
             if (wrk->in_ndx > 0) {
                 // commands must be at least 1 byte long
