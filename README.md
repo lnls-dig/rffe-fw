@@ -6,8 +6,6 @@ Firmware for the RFFE Control Boards, based on MBED, using a Cortex M3 LPC1768 p
 
 The following packages must be installed on your system in order to compile the firmware:
 - **gcc-arm-none-eabi**
-- **cmake**
-- **cmake-gui** (Optional)
 
 **gcc-arm-none-eabi** can be installed from the pre-compiled files found at: https://launchpad.net/gcc-arm-embedded/+download
 or you can run the following command under Ubuntu:
@@ -20,7 +18,7 @@ Next step is to clone this repository into your workspace. Since we're using the
 
 If you've already cloned the repository without the recursive option, go to the source folder and run:
 
-	cd mbed-libs
+	cd mbed-os
 	git submodule update --init --recursive
 
 ## Compilation
@@ -29,23 +27,22 @@ Go to the repository folder
 
 	cd /path/to/repo/
 
-Create a new folder wherever is suitable
+Run `make` (you can add the `-j4` flag to speed up the proccess) :
 
-	cd <build_folder>
+    make -j4
 
-Run CMake using the path to the repository folder as an direct argument and the flags configure the compilation scripts to your specific build. It's possible to set several options like Board IP, DHCP Mode, Mount path, libs to compile, etc in `CMakeCache.txt` file using your text editor, passing the options via `-D<option>=<value>` or a GUI editor for CMake (`cmake-gui`).
+A few flags can be set in order to match your hardware setup, which are:
 
-        cmake <path_to_source> -D<option1>=<value1> -D<option2>=<value2> ...
+    ETH_INTERFACE=<FIX_IP|DHCP>
+    TEMP_SENSOR=<ADT7320|LM71>
+
+If not set, the Makefile will output a warning and use a default value for each.
 
 Example:
 
-	cmake ../ -DUSE_FIXIP=true -DMBED_IP=10.2.119.203 -DMBED_MASK=10.2.119.255 -DMBED_GATEWAY=10.2.119.1
+	make -j4 ETH_INTERFACE=FIX_IP IP=10.2.119.203 GATEWAY=10.2.119.1 TEMP_SENSOR=ADT7320
 
-After changing the desired options, run the CMake configuration command again, if `CMakeCache.txt` was changed, and compile the firmware:
-
-	make -s
-
-*NOTE: The compiler will return several warnings, most of them are regarding the mbed libraries, but since they have a stable version on github, we'll just use the master branch and ignore those warnings.*
+*NOTE: The compiler will return a few warnings, most of them are regarding the mbed libraries, but since they have a stable version on github, we'll just use the master branch and ignore those warnings.*
 
 Both a `.axf` file and a `.bin` file will be generated in the source folder. You can use any one you prefer to program your processor.
 
@@ -59,7 +56,7 @@ To program the firmware in the MBED board, just plug in a USB cable in its front
 
 Copy the generated binary file before into the MBED storage and reset the board (Power Cycle or Reset button).
 
-**NOTE:**The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes.
+**IMPORTANT:** The binary file name **MUST** match the firmware version string (FW_VERSION) defined in `src/main.cpp`, or else the firmware will delete is own binary file upon start. The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes, but they'll be renamed from `*.bin` to `*.old`.
 
 ## Logging
 
@@ -91,5 +88,4 @@ As a last reminder. The procedure will be more useful if the RFFE is set to use 
 
 ```c
 #define DEBUG_PRINTF
-
 ```
