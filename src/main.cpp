@@ -33,7 +33,7 @@ extern "C" {
 #define FILE_DATASIZE   127
 
 /* Firmware version macros */
-#define FW_VERSION      "V2_0_0"
+#define FW_VERSION      "V1_0_0"
 #define FW_VERSION_FILE "/local/" FW_VERSION ".bin"
 
 /* MBED Reset function */
