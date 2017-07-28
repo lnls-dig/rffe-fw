@@ -307,10 +307,7 @@ LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--en
 ###############################################################################
 # Rules
 
-.PHONY: all lst size mbed-os
-
-
-all: $(PROJECT).bin $(PROJECT).hex size
+all: $(PROJECT).bin $(PROJECT).hex
 
 mbed-os:
 	@$(MAKE) -C ../ -f mbed-os.mk
@@ -357,6 +354,8 @@ $(PROJECT).bin: $(PROJECT).elf
 $(PROJECT).hex: $(PROJECT).elf
 	$(ELF2BIN) -O ihex $< $@
 
+
+.PHONY: all mbed-os
 
 # Rules
 ###############################################################################

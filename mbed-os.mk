@@ -536,7 +536,6 @@ ASM_FLAGS += -D__MBED_CMSIS_RTOS_CM
 ASM_FLAGS += -D__CORTEX_M3
 ASM_FLAGS += -DARM_MATH_CM3
 
-
 LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_memalign_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(PROJECT).map
 LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--end-group
 
@@ -575,26 +574,7 @@ all: $(PROJECT).a
 	+@echo "Compile: $(notdir $<)"
 	@$(CPP) $(CXX_FLAGS) $(INCLUDE_PATHS) -o $@ $<
 
-
-$(PROJECT).link_script.ld: $(LINKER_SCRIPT)
-	@$(PREPROC) $< -o $@
-#
-#
-#
-#$(PROJECT).elf: $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld
-#	+@echo "link: $(notdir $@)"
-#	@$(LD) $(LD_FLAGS) -T $(filter %.ld, $^) $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
-#
-#
-#$(PROJECT).bin: $(PROJECT).elf
-#	$(ELF2BIN) -O binary $< $@
-#	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ ====="
-#
-#$(PROJECT).hex: $(PROJECT).elf
-#	$(ELF2BIN) -O ihex $< $@
-
-
-$(PROJECT).a: $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld
+$(PROJECT).a: $(OBJECTS) $(SYS_OBJECTS)
 	+@echo "Creating library: $(notdir $@)"
 	@$(AR) lib$@ $(filter %.o, $^)
 
