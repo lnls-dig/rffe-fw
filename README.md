@@ -56,7 +56,7 @@ To program the firmware in the MBED board, just plug in a USB cable in its front
 
 Copy the generated binary file before into the MBED storage and reset the board (Power Cycle or Reset button).
 
-**IMPORTANT:** The binary file name **MUST** match the firmware version string (FW_VERSION) defined in `src/main.cpp`, or else the firmware will delete is own binary file upon start. The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes, but they'll be renamed from `*.bin` to `*.old`.
+**IMPORTANT:** The binary file name **MUST** match the firmware version string (FW_VERSION) defined in `src/main.cpp`, otherwise the firmware will delete is own binary file upon start. The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes, but they'll be renamed from `*.bin` to `*.old`.
 
 ## Logging
 
