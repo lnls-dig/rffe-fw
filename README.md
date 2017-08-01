@@ -38,13 +38,13 @@ A few flags can be set in order to match your hardware setup, which are:
 
 If not set, the Makefile will output a warning and use a default value for each.
 
-Example:
+Example using fixed IP addressing and ADT7320 temperature sensor:
 
 	make -j4 ETH_INTERFACE=FIX_IP IP=10.2.119.203 GATEWAY=10.2.119.1 TEMP_SENSOR=ADT7320
 
-*NOTE: The compiler will return a few warnings, most of them are regarding the mbed libraries, but since they have a stable version on github, we'll just use the master branch and ignore those warnings.*
+*NOTE: The compiler will print a few warnings, most of them are regarding the mbed libraries, but since they have a stable version on github, we'll just ignore those warnings.*
 
-Both a `.axf` file and a `.bin` file will be generated in the source folder. You can use any one you prefer to program your processor.
+Both a `.elf` file and a `.bin` file will be generated in the source folder. You can use any one you prefer to program your processor.
 
 To clean the compilation files (binaries, objects and dependence files), just run
 
@@ -56,7 +56,7 @@ To program the firmware in the MBED board, just plug in a USB cable in its front
 
 Copy the generated binary file before into the MBED storage and reset the board (Power Cycle or Reset button).
 
-**IMPORTANT:** The binary file name **MUST** match the firmware version string (FW_VERSION) defined in `src/main.cpp`, otherwise the firmware will delete is own binary file upon start. The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes, but they'll be renamed from `*.bin` to `*.old`.
+**IMPORTANT:** You **MUST NOT** rename the generated binary file, otherwise the firmware will delete its own file upon start. The MBED bootloader will run only the newest binary file found in its drive, therefore, you can have multiple revisions of the firmware stored for backup purposes, but they'll be renamed from `*.bin` to `*.old` automatically on boot.
 
 ## Logging
 
