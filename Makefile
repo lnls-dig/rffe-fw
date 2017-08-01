@@ -155,6 +155,7 @@ CC      = 'arm-none-eabi-gcc' '-std=gnu99' '-c' '-Wall' '-Wextra' '-Wno-unused-p
 CPP     = 'arm-none-eabi-g++' '-std=gnu++98' '-fno-rtti' '-Wvla' '-c' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-DMBED_DEBUG' '-DMBED_TRAP_ERRORS_ENABLED=1' '-mcpu=cortex-m3' '-mthumb'
 LD      = 'arm-none-eabi-gcc'
 ELF2BIN = 'arm-none-eabi-objcopy'
+MACROS  = 'arm-none-eabi-g++' '-E' '-std=gnu++98' '-fno-rtti' '-Wvla' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-DMBED_DEBUG' '-DMBED_TRAP_ERRORS_ENABLED=1' '-mcpu=cortex-m3' '-mthumb'
 PREPROC = 'arm-none-eabi-cpp' '-E' '-P' '-Wl,--gc-sections' '-Wl,--wrap,main' '-Wl,--wrap,_malloc_r' '-Wl,--wrap,_free_r' '-Wl,--wrap,_realloc_r' '-Wl,--wrap,_memalign_r' '-Wl,--wrap,_calloc_r' '-Wl,--wrap,exit' '-Wl,--wrap,atexit' '-Wl,-n' '-mcpu=cortex-m3' '-mthumb'
 
 
@@ -300,14 +301,17 @@ ASM_FLAGS += -D__CORTEX_M3
 ASM_FLAGS += -DARM_MATH_CM3
 
 
-LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_memalign_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(PROJECT).map
+FW_VERSION := $(shell $(MACROS) -E -dM ../src/main.cpp $(CXX_FLAGS) $(INCLUDE_PATHS) | grep "\#define FW_VERSION " | grep -oP "(V\d\_\d\_\d)")
+
+LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_memalign_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(FW_VERSION).map
 LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--end-group
+
 
 # Tools and Flags
 ###############################################################################
 # Rules
 
-all: $(PROJECT).bin $(PROJECT).hex
+all: $(FW_VERSION).bin
 
 mbed-os:
 	@$(MAKE) -C ../ -f mbed-os.mk
@@ -337,23 +341,19 @@ mbed-os:
 	+@echo "Compile: $(notdir $<)"
 	@$(CPP) $(CXX_FLAGS) $(INCLUDE_PATHS) -o $@ $<
 
-
-$(PROJECT).link_script.ld: $(LINKER_SCRIPT)
+$(FW_VERSION).link_script.ld: $(LINKER_SCRIPT)
 	@$(PREPROC) $< -o $@
 
-
-$(PROJECT).elf: mbed-os $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld
+$(FW_VERSION).elf: mbed-os $(OBJECTS) $(SYS_OBJECTS) $(FW_VERSION).link_script.ld
 	+@echo "link: $(notdir $@)"
 	@$(LD) $(LD_FLAGS) -T $(filter %.ld, $^) $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
 
-
-$(PROJECT).bin: $(PROJECT).elf
+$(FW_VERSION).bin: $(FW_VERSION).elf
 	$(ELF2BIN) -O binary $< $@
 	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ ====="
 
-$(PROJECT).hex: $(PROJECT).elf
+$(FW_VERSION).hex: $(FW_VERSION).elf
 	$(ELF2BIN) -O ihex $< $@
-
 
 .PHONY: all mbed-os
 
@@ -367,3 +367,5 @@ endif
 
 # Dependencies
 ###############################################################################
+
+
