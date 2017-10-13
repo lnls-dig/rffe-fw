@@ -264,10 +264,10 @@ void Attenuators_Control( void )
 
     while (1) {
         // Attenuators set
+        Thread::signal_wait(0x01);
         if ( prev_att1 != get_value64(Att) ) {
             // Checking and setting attenuators value to fisable values
             set_value(Att,(float)(int(get_value64(Att)*2))/2);
-
 #ifdef DEBUG_PRINTF
             printf("\nAtt values updated from: %f to %f\n", prev_att1, get_value64(Att));
 #endif
@@ -288,11 +288,11 @@ void Attenuators_Control( void )
                 clk = 1;
                 Thread::wait(1);
             }
+            // Falling edge on Latch Enable pin
             LE = 1;
             Thread::wait(1);
             LE = 0;
         }
-        Thread::wait(100);
     }
 }
 
@@ -427,6 +427,22 @@ static void EthLED_callback( void const *arg )
 
 RtosTimer EthLED_timer(EthLED_callback, osTimerOnce, (void *) NULL);
 
+void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
+{
+    bsmp_var *var = NULL;
+    uint8_t i = 0;
+
+    if (op == BSMP_OP_READ) return;
+
+    for (i = 0; list[i] != NULL; i++) {
+        var = list[i];
+        if (var->info.id == 0) {
+            // Attenuator value changed
+            Attenuators_thread.signal_set(0x01);
+        }
+    }
+}
+
 int main( void )
 {
     //Init serial port for info printf
@@ -434,6 +450,8 @@ int main( void )
 
     bsmp = bsmp_server_new();
     MBED_ASSERT(bsmp);
+
+    bsmp_register_hook(bsmp, bsmp_hook_signal_threads);
 
     led_g=0;
     led_r=0;
