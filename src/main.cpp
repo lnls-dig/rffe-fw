@@ -255,18 +255,10 @@ void Temp_Feedback_Control( void )
     }
 }
 
-static void Clk_att( void const *arg )
-{
-    clk = !clk;
-}
-
-RtosTimer Clock_thread(Clk_att, osTimerPeriodic, (void *) NULL);
-
 void Attenuators_Control( void )
 {
     double prev_att1 = 0;
     bool attVec1[6];
-
 
     printf("Initializing Attenuators thread\n");
 
@@ -285,20 +277,20 @@ void Attenuators_Control( void )
 
             LE = 0;
             clk = 0;
-            Clock_thread.start(10);
             // Serial data to attenuators
             for (int i = 5; i >= 0; i--) {
                 dataA = attVec1[i];
                 dataB = attVec1[i];
                 dataC = attVec1[i];
                 dataD = attVec1[i];
-                while (clk == 0) Thread::wait(1);// Waiting clock change
-                while (clk == 1) Thread::wait(1);// Waiting clock change
+                clk = 0;
+                Thread::wait(1);
+                clk = 1;
+                Thread::wait(1);
             }
             LE = 1;
             Thread::wait(1);
             LE = 0;
-            Clock_thread.stop();
         }
         Thread::wait(100);
     }
