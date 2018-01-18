@@ -18,7 +18,7 @@ extern "C" {
 #include "server.h"
 #include <bsmp/server.h>
 }
-
+#define DEBUG_PRINTF
 #define DP8_SPEED10MBPS (1 << 1)    /**< 1=10MBps speed */
 #define DP8_VALID_LINK  (1 << 0)    /**< 1=Link active */
 
@@ -378,6 +378,10 @@ void CLI_Proccess( void )
                 printf("Unknown data type to set!\n");
             }
 
+            if (var_index == 0) {
+                /* Wake-up attenuator thread to update attenuation values */
+                Attenuators_thread.signal_set(0x01);
+            }
         } else if ((strcmp( cmd, "help" ) == 0) || (strcmp( cmd, "?" ) == 0) ) {
             printf("RFFE Firmware help. Available commands:\n");
             printf("\tCMD\t[arg1]\t[arg2]\n");
