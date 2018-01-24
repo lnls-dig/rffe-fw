@@ -18,7 +18,7 @@ extern "C" {
 #include "server.h"
 #include <bsmp/server.h>
 }
-#define DEBUG_PRINTF
+
 #define DP8_SPEED10MBPS (1 << 1)    /**< 1=10MBps speed */
 #define DP8_VALID_LINK  (1 << 0)    /**< 1=Link active */
 
