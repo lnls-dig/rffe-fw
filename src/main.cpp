@@ -424,12 +424,12 @@ void check_fw_version( void )
     closedir(local_d);
 }
 
-static void EthLED_callback( void const *arg )
+static void EthLED_callback( void )
 {
     LedG = 0;
 }
 
-RtosTimer EthLED_timer(EthLED_callback, osTimerOnce, (void *) NULL);
+EventQueue EthLED_timer(EVENTS_EVENT_SIZE);
 
 void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 {
@@ -598,8 +598,7 @@ int main( void )
                 }
                 /* Pulse activity LED */
                 LedG = 1;
-                EthLED_timer.start(25);
-
+                EthLED_timer.call_in(25, &EthLED_callback);
 
 #ifdef DEBUG_PRINTF
                 printf("Received message of %d bytes: ", recv_sz);
