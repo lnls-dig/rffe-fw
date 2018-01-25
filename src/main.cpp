@@ -457,8 +457,8 @@ int main( void )
 
     bsmp_register_hook(bsmp, bsmp_hook_signal_threads);
 
-    led_g=0;
-    led_r=0;
+    led_g = 0;
+    led_r = 0;
 
     /* Find firwmare version */
     check_fw_version();
@@ -575,7 +575,10 @@ int main( void )
 
             printf("Connection from client: %s\r\n", client_addr.get_ip_address());
 
+            led_g = 1;
+
             while ( get_eth_link_status() ) {
+
 
                 /* Wait to receive data from client */
                 recv_sz = client.recv((char*)buf, 3);
@@ -685,6 +688,7 @@ int main( void )
 
             client.close();
             printf("Client Disconnected!\r\n");
+            led_g = 0;
 
             if (get_eth_link_status() == 0) {
                 /* Eth link is down, clean-up server connection */
