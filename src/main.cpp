@@ -549,7 +549,6 @@ int main( void )
     while (true) {
         printf("Trying to bring up ethernet connection...\r\n");
         while (net.connect() != 0) {
-            printf("Attempt failed. Trying again in 0.5s... \r\n");
             Thread::wait(500);
         }
         printf("Success! RFFE eth server is up!\r\n");
