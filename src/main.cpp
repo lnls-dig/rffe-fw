@@ -459,6 +459,7 @@ int main( void )
 
     led_g = 0;
     led_r = 0;
+    led1 = 1;
 
     /* Find firwmare version */
     check_fw_version();
