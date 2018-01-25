@@ -429,7 +429,7 @@ static void EthLED_callback( void )
     LedG = 0;
 }
 
-EventQueue EthLED_timer(EVENTS_EVENT_SIZE);
+Timeout EthLED_timer;
 
 void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 {
@@ -598,7 +598,7 @@ int main( void )
                 }
                 /* Pulse activity LED */
                 LedG = 1;
-                EthLED_timer.call_in(25, &EthLED_callback);
+                EthLED_timer.attach(&EthLED_callback, 0.2);
 
 #ifdef DEBUG_PRINTF
                 printf("Received message of %d bytes: ", recv_sz);
