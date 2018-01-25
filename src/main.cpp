@@ -450,7 +450,7 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 int main( void )
 {
     //Init serial port for info printf
-    pc.baud(19200);
+    pc.baud(115200);
 
     bsmp = bsmp_server_new();
     MBED_ASSERT(bsmp);
