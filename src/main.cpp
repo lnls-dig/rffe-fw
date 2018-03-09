@@ -60,6 +60,10 @@ double PID_BD_tauI[1];
 double PID_BD_tauD[1];
 char IP_Addr[16];
 char MAC_Addr[18];
+double Att_A[1];
+double Att_B[1];
+double Att_C[1];
+double Att_D[1];
 
 #define READ_ONLY  0
 #define READ_WRITE 1
@@ -88,6 +92,10 @@ struct bsmp_var rffe_vars[] = {
     RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
     RFFE_VAR( IP_Addr,        READ_ONLY ), // Ip Address
     RFFE_VAR( MAC_Addr,       READ_ONLY ), // MAC Address
+    RFFE_VAR( Att_A,          READ_WRITE ), // Attenuator for channel A
+    RFFE_VAR( Att_B,          READ_WRITE ), // Attenuator for channel B
+    RFFE_VAR( Att_C,          READ_WRITE ), // Attenuator for channel C
+    RFFE_VAR( Att_D,          READ_WRITE ), // Attenuator for channel D
 };
 
 // Create the local filesystem under the name "local"
@@ -258,7 +266,7 @@ void Temp_Feedback_Control( void )
 void Attenuators_Control( void )
 {
     double prev_att1 = 0;
-    bool attVec1[6];
+    bool attVec[4][6];
 
     printf("Initializing Attenuators thread\r\n");
 
@@ -273,26 +281,34 @@ void Attenuators_Control( void )
 #endif
             // Updating previous values
             prev_att1 = get_value64(Att);
-            int2bin6(int(prev_att1*2), attVec1);
-
-            LE = 0;
-            clk = 0;
-            // Serial data to attenuators
-            for (int i = 5; i >= 0; i--) {
-                dataA = attVec1[i];
-                dataB = attVec1[i];
-                dataC = attVec1[i];
-                dataD = attVec1[i];
-                clk = 0;
-                Thread::wait(1);
-                clk = 1;
-                Thread::wait(1);
-            }
-            // Falling edge on Latch Enable pin
-            LE = 1;
-            Thread::wait(1);
-            LE = 0;
+            set_value(Att_A,(float)(int(get_value64(Att)*2))/2);
+            set_value(Att_B,(float)(int(get_value64(Att)*2))/2);
+            set_value(Att_C,(float)(int(get_value64(Att)*2))/2);
+            set_value(Att_D,(float)(int(get_value64(Att)*2))/2);
         }
+
+        int2bin6(int(get_value64(Att_A)*2), attVec[0]);
+        int2bin6(int(get_value64(Att_B)*2), attVec[1]);
+        int2bin6(int(get_value64(Att_C)*2), attVec[2]);
+        int2bin6(int(get_value64(Att_D)*2), attVec[3]);
+
+        LE = 0;
+        clk = 0;
+        // Serial data to attenuators
+        for (int i = 5; i >= 0; i--) {
+            dataA = attVec[0][i];
+            dataB = attVec[1][i];
+            dataC = attVec[2][i];
+            dataD = attVec[3][i];
+            clk = 0;
+            Thread::wait(1);
+            clk = 1;
+            Thread::wait(1);
+        }
+        // Falling edge on Latch Enable pin
+        LE = 1;
+        Thread::wait(1);
+        LE = 0;
     }
 }
 
@@ -378,7 +394,7 @@ void CLI_Proccess( void )
                 printf("Unknown data type to set!\r\n");
             }
 
-            if (var_index == 0) {
+            if (var_index == 0 || (var_index >= 20 && var_index <= 23)) {
                 /* Wake-up attenuator thread to update attenuation values */
                 Attenuators_thread.signal_set(0x01);
             }
