@@ -5,7 +5,11 @@ double LM71::Read()
     int16_t data = 0;
     double temp = 0;
 
-    LM71::Config( _freq, LM71_MODE_CONVERSION);
+    if (_mode != LM71_MODE_CONVERSION) {
+    	LM71::Config(_freq, LM71_MODE_CONVERSION);
+    }
+
+    _spi.format(16,0);
 
     _cs = 0;
     Thread::wait(1);
@@ -17,7 +21,7 @@ double LM71::Read()
 
     /* Check if the current read is within range, if not, return the last valid data */
     if ( (temp >= minTemp) && (temp <= maxTemp) ) {
-	lastTemp = temp;
+        lastTemp = temp;
     } else {
         _err++;
         //temp = lastTemp;
