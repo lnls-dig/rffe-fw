@@ -259,7 +259,7 @@ void Temp_Feedback_Control( void )
 #ifdef DEBUG_PRINTF
         printf("Heater output AC: %f \t BD: %f\r\n", voutAC, voutBD);
 #endif
-        Thread::wait(100);
+        Thread::wait(250);
     }
 }
 
