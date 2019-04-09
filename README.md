@@ -1,5 +1,7 @@
 # RFFE Controller Firmware
 
+__WARNING__: This firmware is no longer maintained and should not be used! The new firmware for RFFE boards is https://github.com/lnls-dig/rffe-uc-fw
+
 Firmware for the RFFE Control Boards, based on MBED, using a Cortex M3 LPC1768 processor.
 
 ## Pre-requisites
